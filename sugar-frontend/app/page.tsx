@@ -22,14 +22,13 @@ export default function Home() {
   const [cartOpen, setCartOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // 🌸 FIX: We added setHasMounted(true) and setLoading(false) here
   useEffect(() => {
     setHasMounted(true); 
     fetch("/api/foods")
       .then(res => res.json())
       .then(data => {
         setFoods(data);
-        setLoading(false); // The magic curtain is now pulled back!
+        setLoading(false);
       })
       .catch(err => {
         console.error("Fetch error:", err);
@@ -60,7 +59,7 @@ export default function Home() {
       }];
     });
 
-    setNotification(`${item.name} added to bag! check the cart for more details.🍓`);
+    setNotification(`${item.name} added to bag!🍓`);
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -77,7 +76,6 @@ export default function Home() {
     { icon: "🍪", top: "88%", left: "85%" },
   ];
 
-  // While mounting, we show the base background color
   if (!hasMounted) return <div className="min-h-screen bg-[#F0EBD1]" />;
 
   return (
@@ -111,7 +109,15 @@ export default function Home() {
       </div>
 
       <div className="relative w-screen h-[500px] md:h-[600px] flex flex-col items-center justify-center z-10">
-        <Image src="/images/hero-new.jpg" alt="Hero" fill className="object-cover" priority />
+        {/* FIX: Updated path to match your folder and added unoptimized */}
+        <Image 
+          src="/images/new-hero.jpg" 
+          alt="Hero" 
+          fill 
+          className="object-cover" 
+          priority 
+          unoptimized 
+        />
         <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" />
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
@@ -133,13 +139,6 @@ export default function Home() {
           >
             <span className="relative inline-block">
               🥞 Honey Haze 🍯
-              <motion.span 
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent bg-[length:200%_100%] bg-clip-text text-transparent"
-                animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-              >
-                🥞 Honey Haze 🍯
-              </motion.span>
             </span>
           </motion.h1>
 
@@ -177,7 +176,13 @@ export default function Home() {
               whileHover={{ scale: 1.03 }}
             >
               <div className="relative w-full h-64">
-                <Image src={food.image} alt={food.name} fill className="object-cover" />
+                <Image 
+                  src={food.image || "/images/logo.jpg"} 
+                  alt={food.name} 
+                  fill 
+                  className="object-cover" 
+                  unoptimized 
+                />
               </div>
               <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-xl font-black text-[#C98895] mb-2 uppercase">{food.name}</h3>
