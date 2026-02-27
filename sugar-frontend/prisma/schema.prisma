@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // Add this back if v6 asks for it!
+  
 }
 
 model Food {
