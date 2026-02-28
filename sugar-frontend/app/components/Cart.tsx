@@ -242,7 +242,7 @@ export default function Cart({
                     <div className="bg-[#fff] border-2 border-[#8b5a2b] rounded-xl relative overflow-hidden">
                         <div className="bg-[#8b5a2b] text-white p-2 flex items-center justify-center gap-2">
                             <ReceiptText size={14} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Official Receipt</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Summary of The Order</span>
                         </div>
                         <div className="p-4 space-y-3">
                             <div className="text-center pb-3 border-b-2 border-dashed border-[#8b5a2b]/20">
