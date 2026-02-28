@@ -4,10 +4,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Phone, MessageSquare, Navigation, Timer } from 'lucide-react';
-// ❌ REMOVED: import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// --- DYNAMIC IMPORTS ---
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { 
   ssr: false,
   loading: () => <div className="h-full w-full bg-stone-100 animate-pulse rounded-3xl" />
@@ -16,11 +14,9 @@ const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLaye
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false }) as any;
 const Polyline = dynamic(() => import('react-leaflet').then(mod => mod.Polyline), { ssr: false }) as any;
 
-// Use a hook to get Leaflet safely
 const useLeaflet = () => {
   const [leaflet, setLeaflet] = useState<any>(null);
   useEffect(() => {
-    // Only import leaflet on the client
     import('leaflet').then((mod) => setLeaflet(mod.default));
   }, []);
   return leaflet;
@@ -29,14 +25,15 @@ const useLeaflet = () => {
 interface OrderTrackerProps {
   address: string;
   destination: [number, number];
+  onProgressUpdate?: (progress: number) => void;
 }
 
 const SHOP_COORDS: [number, number] = [23.7461, 90.3742];
-const TOTAL_DURATION = 45000; 
+// FIX: Slowed down animation duration to 300 seconds (5 minutes) for realism 
+const TOTAL_DURATION = 300000; 
 const NOMINAL_DELIVERY_TIME = 35;
 
 function MapContent({ destination, currentPos, bikeIcon, shopIcon, L }: any) {
-  // Safe access to useMap via dynamic import logic
   const { useMap } = require('react-leaflet');
   const map = useMap();
   
@@ -70,8 +67,8 @@ function MapContent({ destination, currentPos, bikeIcon, shopIcon, L }: any) {
   );
 }
 
-export default function OrderTracker({ address, destination }: OrderTrackerProps) {
-  const L = useLeaflet(); // Safely get Leaflet instance
+export default function OrderTracker({ address, destination, onProgressUpdate }: OrderTrackerProps) {
+  const L = useLeaflet(); 
   const [currentPos, setCurrentPos] = useState<[number, number]>(SHOP_COORDS);
   const [progress, setProgress] = useState(0);
   const [timeLeft, setTimeLeft] = useState(NOMINAL_DELIVERY_TIME);
@@ -89,14 +86,17 @@ export default function OrderTracker({ address, destination }: OrderTrackerProps
       const linearProgress = Math.min(elapsed / TOTAL_DURATION, 1);
       const lat = SHOP_COORDS[0] + (destination[0] - SHOP_COORDS[0]) * linearProgress;
       const lng = SHOP_COORDS[1] + (destination[1] - SHOP_COORDS[1]) * linearProgress;
+      
       setCurrentPos([lat, lng]);
       setProgress(linearProgress * 100);
+      if (onProgressUpdate) onProgressUpdate(linearProgress * 100);
+      
       setTimeLeft(Math.ceil((1 - linearProgress) * NOMINAL_DELIVERY_TIME));
       if (linearProgress < 1) requestAnimationFrame(moveRider);
     };
     const animationFrame = requestAnimationFrame(moveRider);
     return () => cancelAnimationFrame(animationFrame);
-  }, [destination, isClient]);
+  }, [destination, isClient, onProgressUpdate]);
 
   const bikeIcon = useMemo(() => {
     if (!isClient || !L) return null;

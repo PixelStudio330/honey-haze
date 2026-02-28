@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Trash2, Minus, Plus, X, CreditCard, CheckCircle, MapPin, Clock, ReceiptText, Loader2, ShieldAlert, Undo2 } from "lucide-react";
+import { ShoppingBag, Trash2, Minus, Plus, X, CreditCard, CheckCircle, MapPin, Clock, ReceiptText, Loader2, ShieldAlert, Undo2, Globe2 } from "lucide-react";
 import OrderTracker from "./OrderTracker"; 
 
 export interface CartItem {
@@ -38,9 +38,10 @@ export default function Cart({
   const [address, setAddress] = useState("");
   const [coords, setCoords] = useState<[number, number] | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [deliveryProgress, setDeliveryProgress] = useState(0);
 
-  // --- CANCELLATION LOGIC ---
-  const [cancelTimer, setCancelTimer] = useState(300); 
+  // --- CANCELLATION LOGIC (Updated to 2 Minutes) ---
+  const [cancelTimer, setCancelTimer] = useState(120); 
   const [canCancel, setCanCancel] = useState(true);
 
   useEffect(() => {
@@ -56,17 +57,21 @@ export default function Cart({
   }, [isOrdered, cancelTimer]);
 
   const handleCancelOrder = () => {
+    if (deliveryProgress > 90) {
+        alert("The rider is almost at your door! Cancellation is no longer possible. 🛵");
+        return;
+    }
     const confirmCancel = window.confirm("Are you sure you want to cancel? This will clear your cart. 🍩");
     if (confirmCancel) {
       setIsOrdered(false);
-      setCart([]); // Reset the cart on cancellation
+      setCart([]);
       setAddress("");
       setCoords(null);
-      setCancelTimer(300);
+      setCancelTimer(120); // Reset to 2 mins
       setCanCancel(true);
+      setDeliveryProgress(0);
     }
   };
-  // ---------------------------
 
   const deliveryTime = useMemo(() => {
     const now = new Date();
@@ -97,15 +102,22 @@ export default function Cart({
     setIsGeocoding(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Bangladesh")}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=bd&limit=1`
       );
       const data = await response.json();
 
       if (data && data.length > 0) {
-        setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+
+        if (lat < 20.0 || lat > 27.0 || lon < 88.0 || lon > 93.0) {
+            throw new Error("Out of bounds");
+        }
+
+        setCoords([lat, lon]);
         setIsOrdered(true);
       } else {
-        alert("We couldn't find that location. Please be more specific.");
+        alert("We couldn't find that location in Bangladesh. Please be more specific.");
       }
     } catch (error) {
       setCoords([23.7500, 90.3880]);
@@ -117,15 +129,15 @@ export default function Cart({
 
   const closeCart = () => {
     setCartOpen(false);
-    // If the order is fully completed (cancel window expired), reset everything on close
-    if (isOrdered && !canCancel) {
+    if (isOrdered && (!canCancel || deliveryProgress >= 100)) {
         setTimeout(() => {
             setIsOrdered(false);
             setCart([]);
             setAddress(""); 
             setCoords(null);
-            setCancelTimer(300);
+            setCancelTimer(120);
             setCanCancel(true);
+            setDeliveryProgress(0);
         }, 500);
     }
   };
@@ -166,6 +178,14 @@ export default function Cart({
               <AnimatePresence mode="wait">
                 {!isOrdered ? (
                   <motion.div key="cart-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+                    {/* 🌍 DELIVERY RADIUS NOTE */}
+                    <div className="bg-[#f0f9eb] border-2 border-[#90be6d]/30 p-3 rounded-2xl flex items-center gap-3">
+                        <Globe2 size={18} className="text-[#90be6d] shrink-0" />
+                        <p className="text-[10px] font-black text-[#5a7d32] uppercase leading-tight">
+                            Note: We currently only deliver within <span className="underline">Bangladesh</span>.
+                        </p>
+                    </div>
+
                     {cart.length === 0 ? (
                       <div className="h-64 flex flex-col items-center justify-center text-center space-y-4 opacity-60">
                         <div className="text-6xl">🍰</div>
@@ -194,8 +214,11 @@ export default function Cart({
                   </motion.div>
                 ) : (
                   <motion.div key="receipt" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pb-10">
-                    
-                    <OrderTracker address={address} destination={coords || [23.7639, 90.3886]} />
+                    <OrderTracker 
+                        address={address} 
+                        destination={coords || [23.7639, 90.3886]} 
+                        onProgressUpdate={setDeliveryProgress} 
+                    />
 
                     {/* 📍 DELIVERY INFO */}
                     <div className="bg-white border-2 border-[#8b5a2b] rounded-2xl p-4 shadow-[4px_4px_0px_#8b5a2b] space-y-4">
@@ -221,13 +244,11 @@ export default function Cart({
                             <ReceiptText size={14} />
                             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Official Receipt</span>
                         </div>
-                        
                         <div className="p-4 space-y-3">
                             <div className="text-center pb-3 border-b-2 border-dashed border-[#8b5a2b]/20">
                                 <p className="font-black text-[#8b5a2b] text-sm uppercase">Honey Haze Receipt 🍯</p>
                                 <p className="text-[10px] font-bold text-[#8b5a2b]/50">{orderId}</p>
                             </div>
-
                             <div className="space-y-2 py-2">
                                 {cart.map(item => (
                                     <div key={item._id} className="flex justify-between text-xs font-bold text-[#8b5a2b]">
@@ -236,7 +257,6 @@ export default function Cart({
                                     </div>
                                 ))}
                             </div>
-
                             <div className="pt-3 border-t-2 border-dashed border-[#8b5a2b]/20 space-y-1">
                                 <div className="flex justify-between text-[10px] font-bold text-[#8b5a2b]/60 uppercase">
                                     <span>Subtotal</span>
@@ -247,7 +267,7 @@ export default function Cart({
                                     <span>৳ 50</span>
                                 </div>
                                 <div className="flex justify-between pt-2">
-                                    <span className="font-black text-[#8b5a2b] uppercase text-sm">Total Paid</span>
+                                    <span className="font-black text-[#8b5a2b] uppercase text-sm">Total Payable (COD)</span>
                                     <span className="font-black text-[#D4A24C] text-sm">৳ {(total + 50).toLocaleString()}</span>
                                 </div>
                             </div>
@@ -256,7 +276,7 @@ export default function Cart({
 
                     {/* CANCEL BUTTON SECTION */}
                     <div className="space-y-3">
-                        {canCancel ? (
+                        {canCancel && deliveryProgress < 90 ? (
                             <button 
                                 onClick={handleCancelOrder}
                                 className="w-full bg-white border-2 border-[#CF7486] text-[#CF7486] py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#FFE6ED] transition-colors flex items-center justify-center gap-2"
@@ -266,7 +286,9 @@ export default function Cart({
                             </button>
                         ) : (
                             <div className="p-3 bg-[#fdfcf0] border-2 border-dashed border-[#8b5a2b]/20 rounded-2xl text-center">
-                                <p className="text-[9px] font-black text-[#8b5a2b]/40 uppercase">Order is being prepared. Cancellation locked.</p>
+                                <p className="text-[9px] font-black text-[#8b5a2b]/40 uppercase">
+                                    {deliveryProgress >= 100 ? "Order Delivered!" : "Order is being prepared. Cancellation locked."}
+                                </p>
                             </div>
                         )}
 
@@ -291,7 +313,7 @@ export default function Cart({
                   <div className="space-y-0.5">
                     <h4 className="text-[10px] font-black text-[#8b5a2b] uppercase">Cancellation Policy</h4>
                     <p className="text-[9px] font-bold text-[#8b5a2b]/60 leading-tight">
-                      Free cancellation within 5 mins. After dispatch, full payment is required for Cash on Delivery.
+                      Free cancellation within 2 mins. After dispatch, full payment is required for Cash on Delivery.
                     </p>
                   </div>
                 </div>
