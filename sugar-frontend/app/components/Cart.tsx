@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Trash2, Minus, Plus, X, CreditCard, CheckCircle } from "lucide-react";
+import { ShoppingBag, Trash2, Minus, Plus, X, CreditCard, CheckCircle, MapPin, Clock, ReceiptText, Loader2, ShieldAlert, Undo2 } from "lucide-react";
+import OrderTracker from "./OrderTracker"; 
 
 export interface CartItem {
   _id: string;
@@ -32,33 +33,101 @@ export default function Cart({
   total,
 }: CartProps) {
   const [isOrdered, setIsOrdered] = useState(false);
+  const [orderId] = useState(() => `ST4R-${Math.floor(1000 + Math.random() * 9000)}`);
+  
+  const [address, setAddress] = useState("");
+  const [coords, setCoords] = useState<[number, number] | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
-  // 🌸 UPDATED LOGIC: Auto-remove if qty drops below 1
+  // --- CANCELLATION LOGIC ---
+  const [cancelTimer, setCancelTimer] = useState(300); 
+  const [canCancel, setCanCancel] = useState(true);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isOrdered && cancelTimer > 0) {
+      interval = setInterval(() => {
+        setCancelTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (cancelTimer === 0) {
+      setCanCancel(false);
+    }
+    return () => clearInterval(interval);
+  }, [isOrdered, cancelTimer]);
+
+  const handleCancelOrder = () => {
+    const confirmCancel = window.confirm("Are you sure you want to cancel? This will clear your cart. 🍩");
+    if (confirmCancel) {
+      setIsOrdered(false);
+      setCart([]); // Reset the cart on cancellation
+      setAddress("");
+      setCoords(null);
+      setCancelTimer(300);
+      setCanCancel(true);
+    }
+  };
+  // ---------------------------
+
+  const deliveryTime = useMemo(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 35);
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, [isOrdered]);
+
   const updateQty = (id: string, delta: number) => {
     setCart((prev) => {
       return prev
         .map((item) => {
           if (item._id === id) {
             const newQty = item.qty + delta;
-            // If new quantity is 0 or less, we'll mark it for removal (returning null)
             return newQty > 0 ? { ...item, qty: newQty } : null;
           }
           return item;
         })
-        .filter((item): item is CartItem => item !== null); // Remove the null items
+        .filter((item): item is CartItem => item !== null);
     });
   };
 
-  const handleCheckout = () => {
-    setIsOrdered(true);
-    setTimeout(() => {
-      setCart([]);
-    }, 500);
+  const handleCheckout = async () => {
+    if (!address || address.length < 5) {
+      alert("Please enter a valid address in Bangladesh! 📍");
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Bangladesh")}&limit=1`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        setIsOrdered(true);
+      } else {
+        alert("We couldn't find that location. Please be more specific.");
+      }
+    } catch (error) {
+      setCoords([23.7500, 90.3880]);
+      setIsOrdered(true);
+    } finally {
+      setIsGeocoding(false);
+    }
   };
 
   const closeCart = () => {
     setCartOpen(false);
-    setTimeout(() => setIsOrdered(false), 500);
+    // If the order is fully completed (cancel window expired), reset everything on close
+    if (isOrdered && !canCancel) {
+        setTimeout(() => {
+            setIsOrdered(false);
+            setCart([]);
+            setAddress(""); 
+            setCoords(null);
+            setCancelTimer(300);
+            setCanCancel(true);
+        }, 500);
+    }
   };
 
   return (
@@ -81,31 +150,22 @@ export default function Cart({
             className="fixed top-0 right-0 h-full w-full max-w-[400px] bg-[#fffdf5] shadow-[-10px_0_30px_rgba(0,0,0,0.05)] z-[9999] flex flex-col border-l-[3px] border-[#8b5a2b]"
           >
             {/* HEADER */}
-            <div className="p-6 border-b-[3px] border-[#8b5a2b] bg-[#FFE6ED] flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="text-[#CF7486]" size={24} />
-                <h2 className="text-xl font-black text-[#CF7486] uppercase tracking-tight">
-                    {isOrdered ? "Order Placed!" : "Your Orders"}
+            <div className={`p-6 border-b-[3px] border-[#8b5a2b] flex justify-between items-center transition-colors ${isOrdered ? 'bg-[#90be6d]' : 'bg-[#FFE6ED]'}`}>
+              <div className="flex items-center gap-2 text-white">
+                {isOrdered ? <CheckCircle size={24} /> : <ShoppingBag className="text-[#CF7486]" size={24} />}
+                <h2 className={`text-xl font-black uppercase tracking-tight ${isOrdered ? 'text-white' : 'text-[#CF7486]'}`}>
+                    {isOrdered ? "Order Confirmed" : "Your Orders"}
                 </h2>
               </div>
-              <button 
-                onClick={closeCart}
-                className="p-2 hover:bg-white/50 rounded-full transition-colors text-[#CF7486]"
-              >
-                <X size={24} />
+              <button onClick={closeCart} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+                <X size={24} className={isOrdered ? 'text-white' : 'text-[#CF7486]'} />
               </button>
             </div>
 
-            <div className="flex-grow overflow-y-auto p-6 relative">
+            <div className="flex-grow overflow-y-auto p-6 space-y-6">
               <AnimatePresence mode="wait">
                 {!isOrdered ? (
-                  <motion.div 
-                    key="cart-list"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="space-y-6"
-                  >
+                  <motion.div key="cart-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
                     {cart.length === 0 ? (
                       <div className="h-64 flex flex-col items-center justify-center text-center space-y-4 opacity-60">
                         <div className="text-6xl">🍰</div>
@@ -113,66 +173,110 @@ export default function Cart({
                       </div>
                     ) : (
                       cart.map((item) => (
-                        <motion.div
-                          layout
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.8 }} // Added exit animation for items
-                          key={item._id}
-                          className="group relative flex gap-4 bg-white p-3 rounded-2xl border-2 border-[#8b5a2b] shadow-[4px_4px_0px_#8b5a2b] transition-all"
-                        >
-                          <div className="relative h-20 w-20 flex-shrink-0">
-                            <Image src={item.image} alt={item.name} fill className="object-cover rounded-xl" />
+                        <motion.div layout key={item._id} className="group relative flex gap-4 bg-white p-3 rounded-2xl border-2 border-[#8b5a2b] shadow-[4px_4px_0px_#8b5a2b]">
+                          <div className="relative h-16 w-16 flex-shrink-0">
+                            <Image src={item.image} alt={item.name} fill className="object-cover rounded-xl" unoptimized />
                           </div>
                           <div className="flex flex-col justify-between py-1 flex-grow">
-                            <div>
-                              <h3 className="font-black text-[#8b5a2b] text-sm leading-tight uppercase">{item.name}</h3>
-                              <p className="text-[#D4A24C] font-bold text-xs mt-1">৳ {item.price.toLocaleString()}</p>
-                            </div>
+                            <h3 className="font-black text-[#8b5a2b] text-xs uppercase">{item.name}</h3>
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center bg-[#fdfcf0] border border-[#8b5a2b]/20 rounded-lg px-1">
-                                <button onClick={() => updateQty(item._id, -1)} className="p-1 text-[#8b5a2b] hover:text-[#CF7486]">
-                                  {item.qty === 1 ? <Trash2 size={14} /> : <Minus size={14} />} 
-                                </button>
-                                <span className="w-8 text-center font-bold text-xs">{item.qty}</span>
-                                <button onClick={() => updateQty(item._id, 1)} className="p-1 text-[#8b5a2b] hover:text-[#CF7486]"><Plus size={14} /></button>
+                              <div className="flex items-center bg-[#fdfcf0] border border-[#8b5a2b]/20 rounded-lg">
+                                <button onClick={() => updateQty(item._id, -1)} className="p-1 text-[#8b5a2b]">{item.qty === 1 ? <Trash2 size={12} /> : <Minus size={12} />}</button>
+                                <span className="w-6 text-center font-bold text-xs">{item.qty}</span>
+                                <button onClick={() => updateQty(item._id, 1)} className="p-1 text-[#8b5a2b]"><Plus size={12} /></button>
                               </div>
                               <span className="font-black text-[#8b5a2b] text-sm">৳ {(item.price * item.qty).toLocaleString()}</span>
                             </div>
                           </div>
-                          <button onClick={() => removeFromCart(item._id)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full border-2 border-[#8b5a2b] opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} strokeWidth={3} /></button>
                         </motion.div>
                       ))
                     )}
                   </motion.div>
                 ) : (
-                  <motion.div 
-                    key="success-screen"
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    className="h-full flex flex-col items-center justify-center text-center space-y-6"
-                  >
-                    <motion.div
-                        initial={{ rotate: -10, scale: 0 }}
-                        animate={{ rotate: 0, scale: 1 }}
-                        transition={{ type: "spring", delay: 0.2 }}
-                        className="bg-[#90be6d] p-6 rounded-full text-white shadow-lg"
-                    >
-                        <CheckCircle size={60} />
-                    </motion.div>
-                    <div className="space-y-2">
-                        <h2 className="text-2xl font-black text-[#8b5a2b] uppercase">Order Confirmed!</h2>
-                        <p className="text-[#8b5a2b]/70 font-bold">Your treats are being prepared with love.</p>
-                        <div className="bg-[#FFE6ED] border-2 border-dashed border-[#CF7486] p-3 rounded-xl mt-4">
-                            <p className="text-[#CF7486] font-black text-sm uppercase tracking-widest">Order ID: #CC-{Math.floor(1000 + Math.random() * 9000)}</p>
+                  <motion.div key="receipt" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pb-10">
+                    
+                    <OrderTracker address={address} destination={coords || [23.7639, 90.3886]} />
+
+                    {/* 📍 DELIVERY INFO */}
+                    <div className="bg-white border-2 border-[#8b5a2b] rounded-2xl p-4 shadow-[4px_4px_0px_#8b5a2b] space-y-4">
+                        <div className="flex items-start gap-3">
+                            <div className="bg-[#FFE6ED] p-2 rounded-lg"><MapPin size={20} className="text-[#CF7486]" /></div>
+                            <div>
+                                <p className="text-[10px] font-black text-[#8b5a2b]/50 uppercase">Deliver to</p>
+                                <p className="text-xs font-black text-[#8b5a2b]">{address}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <div className="bg-[#f0f9eb] p-2 rounded-lg"><Clock size={20} className="text-[#90be6d]" /></div>
+                            <div>
+                                <p className="text-[10px] font-black text-[#8b5a2b]/50 uppercase">Estimated Arrival</p>
+                                <p className="text-xs font-black text-[#8b5a2b]">{deliveryTime} (35-40 mins)</p>
+                            </div>
                         </div>
                     </div>
-                    <button 
-                        onClick={closeCart}
-                        className="bg-[#CF7486] text-white px-8 py-3 rounded-full font-black uppercase text-sm shadow-[0_4px_0_#a85a6a] hover:translate-y-[-2px] active:translate-y-[2px] active:shadow-none transition-all"
-                    >
-                        Keep Browsing 🍩
-                    </button>
+
+                    {/* 🧾 DIGITAL RECEIPT */}
+                    <div className="bg-[#fff] border-2 border-[#8b5a2b] rounded-xl relative overflow-hidden">
+                        <div className="bg-[#8b5a2b] text-white p-2 flex items-center justify-center gap-2">
+                            <ReceiptText size={14} />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Official Receipt</span>
+                        </div>
+                        
+                        <div className="p-4 space-y-3">
+                            <div className="text-center pb-3 border-b-2 border-dashed border-[#8b5a2b]/20">
+                                <p className="font-black text-[#8b5a2b] text-sm uppercase">Honey Haze Receipt 🍯</p>
+                                <p className="text-[10px] font-bold text-[#8b5a2b]/50">{orderId}</p>
+                            </div>
+
+                            <div className="space-y-2 py-2">
+                                {cart.map(item => (
+                                    <div key={item._id} className="flex justify-between text-xs font-bold text-[#8b5a2b]">
+                                        <span>{item.qty}x {item.name}</span>
+                                        <span>৳ {(item.price * item.qty).toLocaleString()}</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="pt-3 border-t-2 border-dashed border-[#8b5a2b]/20 space-y-1">
+                                <div className="flex justify-between text-[10px] font-bold text-[#8b5a2b]/60 uppercase">
+                                    <span>Subtotal</span>
+                                    <span>৳ {total.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] font-bold text-[#8b5a2b]/60 uppercase">
+                                    <span>Delivery Fee</span>
+                                    <span>৳ 50</span>
+                                </div>
+                                <div className="flex justify-between pt-2">
+                                    <span className="font-black text-[#8b5a2b] uppercase text-sm">Total Paid</span>
+                                    <span className="font-black text-[#D4A24C] text-sm">৳ {(total + 50).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CANCEL BUTTON SECTION */}
+                    <div className="space-y-3">
+                        {canCancel ? (
+                            <button 
+                                onClick={handleCancelOrder}
+                                className="w-full bg-white border-2 border-[#CF7486] text-[#CF7486] py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#FFE6ED] transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Undo2 size={14} />
+                                Cancel Order ({Math.floor(cancelTimer / 60)}:{(cancelTimer % 60).toString().padStart(2, '0')})
+                            </button>
+                        ) : (
+                            <div className="p-3 bg-[#fdfcf0] border-2 border-dashed border-[#8b5a2b]/20 rounded-2xl text-center">
+                                <p className="text-[9px] font-black text-[#8b5a2b]/40 uppercase">Order is being prepared. Cancellation locked.</p>
+                            </div>
+                        )}
+
+                        <button 
+                            onClick={closeCart}
+                            className="w-full bg-[#8b5a2b] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_4px_0_#5d3d1e] active:translate-y-[2px] transition-all"
+                        >
+                            Back to Menu 🍩
+                        </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -180,24 +284,48 @@ export default function Cart({
 
             {cart.length > 0 && !isOrdered && (
               <div className="p-6 bg-white border-t-[3px] border-[#8b5a2b] space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold text-[#8b5a2b]/60 uppercase">
-                    <span>Subtotal</span>
-                    <span>৳ {total.toLocaleString()}</span>
+                 <div className="bg-[#fdfcf0] border-2 border-[#8b5a2b]/10 p-3 rounded-xl flex gap-3">
+                  <div className="text-[#CF7486] flex-shrink-0 pt-0.5">
+                    <ShieldAlert size={16} />
                   </div>
-                  <div className="flex justify-between items-end pt-2">
-                    <span className="font-black text-[#8b5a2b] uppercase">Total</span>
-                    <span className="text-2xl font-black text-[#D4A24C]">৳ {(total + 50).toLocaleString()}</span>
+                  <div className="space-y-0.5">
+                    <h4 className="text-[10px] font-black text-[#8b5a2b] uppercase">Cancellation Policy</h4>
+                    <p className="text-[9px] font-bold text-[#8b5a2b]/60 leading-tight">
+                      Free cancellation within 5 mins. After dispatch, full payment is required for Cash on Delivery.
+                    </p>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#8b5a2b] uppercase ml-1">Delivery Address</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#CF7486]" size={16} />
+                    <input 
+                      type="text"
+                      placeholder="e.g. Road 27, Dhanmondi"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-[#fdfcf0] border-2 border-[#8b5a2b] rounded-xl text-xs font-bold focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-end">
+                    <div className="space-y-1">
+                        <span className="text-[10px] font-black text-[#8b5a2b]/40 uppercase block leading-none">Total Payable</span>
+                        <span className="text-2xl font-black text-[#D4A24C] leading-none">৳ {(total + 50).toLocaleString()}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#8b5a2b]/60 text-right">Inc. ৳50 delivery fee</span>
+                </div>
+
                 <button 
                     onClick={handleCheckout}
-                    className="w-full bg-[#90be6d] hover:bg-[#7eab5d] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-[0_4px_0_#5a7d32] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-3"
+                    disabled={isGeocoding}
+                    className="w-full bg-[#90be6d] hover:bg-[#7eab5d] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-[0_4px_0_#5a7d32] active:translate-y-[2px] transition-all flex items-center justify-center gap-3 disabled:opacity-70"
                 >
-                  <CreditCard size={20} />
-                  Checkout Now
+                  {isGeocoding ? <Loader2 size={20} className="animate-spin" /> : <CreditCard size={20} />}
+                  {isGeocoding ? "Pinning Location..." : "Confirm Order"}
                 </button>
-                <button onClick={() => setCart([])} className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-[#CF7486] uppercase"><Trash2 size={12} /> Clear Entire Cart</button>
               </div>
             )}
           </motion.div>

@@ -4,6 +4,15 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import Cart, { CartItem } from "./components/Cart";
 
+// 🌸 BACKUP DATA: This stays here forever. 
+// If Neon is down or you are on localhost, the site still looks perfect.
+const backupFoods: FoodItem[] = [
+  { id: 1, name: "Honey Glazed Donut", price: 120, type: "sweet", description: "Soft, fluffy, and dripping with organic honey.", image: "/images/donut.jpg" },
+  { id: 2, name: "Spicy Naga Pasta", price: 350, type: "spicy", description: "Extreme heat for the brave souls.", image: "/images/pasta.jpg" },
+  { id: 3, name: "Strawberry Shortcake", price: 450, type: "sweet", description: "Freshly picked strawberries and cream.", image: "/images/cake.jpg" },
+  { id: 4, name: "Chili Cheese Fries", price: 250, type: "spicy", description: "Loaded with jalapenos and melted cheddar.", image: "/images/fries.jpg" },
+];
+
 interface FoodItem {
   id: number;
   name: string;
@@ -24,16 +33,29 @@ export default function Home() {
 
   useEffect(() => {
     setHasMounted(true); 
-    fetch("/api/foods")
-      .then(res => res.json())
-      .then(data => {
-        setFoods(data);
+    
+    async function loadFoods() {
+      try {
+        const res = await fetch("/api/foods");
+        
+        // If the server returns HTML (The <!DOCTYPE error), this will catch it
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+          throw new Error("API returned non-JSON response");
+        }
+
+        const data = await res.json();
+        // If data is empty or not an array, use backup
+        setFoods(Array.isArray(data) && data.length > 0 ? data : backupFoods);
+      } catch (err) {
+        console.warn("Neon DB unreachable. Using local backup menu. 🌸", err);
+        setFoods(backupFoods);
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        console.error("Fetch error:", err);
-        setLoading(false);
-      });
+      }
+    }
+
+    loadFoods();
   }, []);
 
   const removeFromCart = (id: string) => {
@@ -80,7 +102,7 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen bg-[#F0EBD1] flex flex-col items-center justify-start p-6 text-center overflow-x-hidden">
-      
+      {/* Notifications */}
       <AnimatePresence>
         {notification && (
           <motion.div
@@ -94,7 +116,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="absolute inset-0 pointer-events-none z-[20]">
+      {/* Floating Background Icons */}
+      <div className="absolute inset-0 pointer-events-none z-[5]">
         {bgIcons.map((item, i) => (
           <motion.div
             key={`bg-icon-${i}`}
@@ -108,8 +131,8 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="relative w-screen h-[500px] md:h-[600px] flex flex-col items-center justify-center z-10">
-        {/* FIX: Updated path to match your folder and added unoptimized */}
+      {/* Hero Section */}
+      <div className="relative w-screen h-[400px] md:h-[500px] flex flex-col items-center justify-center z-10">
         <Image 
           src="/images/new-hero.jpg" 
           alt="Hero" 
@@ -118,37 +141,25 @@ export default function Home() {
           priority 
           unoptimized 
         />
-        <div className="absolute inset-0 bg-black/25 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
           <motion.h1
-            className="text-6xl sm:text-7xl font-extrabold relative"
-            style={{
-              color: '#FFD700',
-              textShadow: '0 0 15px rgba(245, 245, 220, 0.4), 0 0 30px rgba(210, 180, 140, 0.2)', 
-            }}
-            animate={{ 
-              y: [-4, 4, -4],
-              filter: [
-                "drop-shadow(0 0 8px rgba(245, 245, 220, 0.3))",
-                "drop-shadow(0 0 18px rgba(210, 180, 140, 0.4))",
-                "drop-shadow(0 0 8px rgba(245, 245, 220, 0.3))"
-              ] 
-            }}
+            className="text-5xl sm:text-7xl font-extrabold"
+            style={{ color: '#FFD700', textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
+            animate={{ y: [-3, 3, -3] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           >
-            <span className="relative inline-block">
-              🥞 Honey Haze 🍯
-            </span>
+            🥞 Honey Haze 🍯
           </motion.h1>
-
-          <p className="mt-6 text-lg sm:text-2xl text-white font-semibold drop-shadow-md italic">
+          <p className="mt-4 text-lg sm:text-2xl text-white font-bold drop-shadow-md italic">
             delicious food, fast service, zero regrets 🍭
           </p>
         </div>
       </div>
 
-      <div className="z-10 flex gap-4 mt-10 mb-6">
+      {/* Filter Buttons */}
+      <div className="z-10 flex gap-4 mt-8 mb-6">
         {["all", "sweet", "spicy"].map((type) => (
           <button
             key={`filter-${type}`}
@@ -162,20 +173,19 @@ export default function Home() {
         ))}
       </div>
 
-      <section className="z-10 w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 px-4">
+      {/* Food Grid */}
+      <section className="z-10 w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-4 pb-20">
         {loading ? (
-          <div className="col-span-full py-20 text-2xl font-bold text-[#8A5559]">Baking the magic... 🌸</div>
-        ) : filteredFoods.length === 0 ? (
-          <p className="text-xl font-bold col-span-full">No foods found 😢</p>
+          <div className="col-span-full py-20 text-2xl font-bold text-[#8A5559] animate-pulse">Baking the magic... 🌸</div>
         ) : (
           filteredFoods.map((food) => (
             <motion.div
               key={`food-card-${food.id}`}
               layout
               className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border-4 border-[#8A5559] flex flex-col"
-              whileHover={{ scale: 1.03 }}
+              whileHover={{ y: -5 }}
             >
-              <div className="relative w-full h-64">
+              <div className="relative w-full h-48">
                 <Image 
                   src={food.image || "/images/logo.jpg"} 
                   alt={food.name} 
@@ -184,16 +194,16 @@ export default function Home() {
                   unoptimized 
                 />
               </div>
-              <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-xl font-black text-[#C98895] mb-2 uppercase">{food.name}</h3>
-                <p className="text-sm text-[#82A899] font-medium mb-4 line-clamp-2">{food.description}</p>
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-dashed border-[#8A5559]/20">
-                   <span className="text-xl font-black text-[#D4A24C]">৳ {food.price || 150}</span>
+              <div className="p-5 flex flex-col flex-grow text-left">
+                <h3 className="text-lg font-black text-[#C98895] uppercase">{food.name}</h3>
+                <p className="text-xs text-[#82A899] font-bold mt-1 mb-4 line-clamp-2">{food.description}</p>
+                <div className="flex items-center justify-between mt-auto">
+                   <span className="text-lg font-black text-[#D4A24C]">৳ {food.price}</span>
                    <button
                     onClick={() => addToCart(food)}
-                    className="bg-[#D4A24C] hover:bg-[#C98895] text-white font-bold py-2 px-5 rounded-full shadow-md transition-colors"
+                    className="bg-[#D4A24C] hover:bg-[#C98895] text-white font-black py-2 px-4 rounded-full text-xs shadow-md transition-all active:scale-90"
                   >
-                    Add +
+                    ADD +
                   </button>
                 </div>
               </div>
@@ -202,6 +212,7 @@ export default function Home() {
         )}
       </section>
 
+      {/* Floating Cart Button */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
@@ -219,6 +230,7 @@ export default function Home() {
         </motion.span>
       </motion.button>
 
+      {/* Cart Drawer */}
       <Cart
         cart={cart}
         cartOpen={cartOpen}
