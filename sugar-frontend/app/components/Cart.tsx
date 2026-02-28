@@ -40,7 +40,7 @@ export default function Cart({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [deliveryProgress, setDeliveryProgress] = useState(0);
 
-  // --- CANCELLATION LOGIC (Updated to 2 Minutes) ---
+  // --- CANCELLATION LOGIC (2 Minutes) ---
   const [cancelTimer, setCancelTimer] = useState(120); 
   const [canCancel, setCanCancel] = useState(true);
 
@@ -67,7 +67,7 @@ export default function Cart({
       setCart([]);
       setAddress("");
       setCoords(null);
-      setCancelTimer(120); // Reset to 2 mins
+      setCancelTimer(120);
       setCanCancel(true);
       setDeliveryProgress(0);
     }
@@ -178,11 +178,11 @@ export default function Cart({
               <AnimatePresence mode="wait">
                 {!isOrdered ? (
                   <motion.div key="cart-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                    {/* 🌍 DELIVERY RADIUS NOTE */}
+                    {/* 🌍 BANGLADESH ONLY NOTE */}
                     <div className="bg-[#f0f9eb] border-2 border-[#90be6d]/30 p-3 rounded-2xl flex items-center gap-3">
                         <Globe2 size={18} className="text-[#90be6d] shrink-0" />
                         <p className="text-[10px] font-black text-[#5a7d32] uppercase leading-tight">
-                            Note: We currently only deliver within <span className="underline">Bangladesh</span>.
+                            Note: We only deliver within <span className="underline">Bangladesh</span>.
                         </p>
                     </div>
 
@@ -249,6 +249,7 @@ export default function Cart({
                                 <p className="font-black text-[#8b5a2b] text-sm uppercase">Honey Haze Receipt 🍯</p>
                                 <p className="text-[10px] font-bold text-[#8b5a2b]/50">{orderId}</p>
                             </div>
+
                             <div className="space-y-2 py-2">
                                 {cart.map(item => (
                                     <div key={item._id} className="flex justify-between text-xs font-bold text-[#8b5a2b]">
@@ -257,6 +258,7 @@ export default function Cart({
                                     </div>
                                 ))}
                             </div>
+
                             <div className="pt-3 border-t-2 border-dashed border-[#8b5a2b]/20 space-y-1">
                                 <div className="flex justify-between text-[10px] font-bold text-[#8b5a2b]/60 uppercase">
                                     <span>Subtotal</span>
@@ -267,7 +269,7 @@ export default function Cart({
                                     <span>৳ 50</span>
                                 </div>
                                 <div className="flex justify-between pt-2">
-                                    <span className="font-black text-[#8b5a2b] uppercase text-sm">Total Payable (COD)</span>
+                                    <span className="font-black text-[#8b5a2b] uppercase text-sm">Pay on delivery</span>
                                     <span className="font-black text-[#D4A24C] text-sm">৳ {(total + 50).toLocaleString()}</span>
                                 </div>
                             </div>
@@ -334,7 +336,7 @@ export default function Cart({
 
                 <div className="flex justify-between items-end">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-black text-[#8b5a2b]/40 uppercase block leading-none">Total Payable</span>
+                        <span className="text-[10px] font-black text-[#8b5a2b]/40 uppercase block leading-none">Pay on delivery</span>
                         <span className="text-2xl font-black text-[#D4A24C] leading-none">৳ {(total + 50).toLocaleString()}</span>
                     </div>
                     <span className="text-[10px] font-bold text-[#8b5a2b]/60 text-right">Inc. ৳50 delivery fee</span>

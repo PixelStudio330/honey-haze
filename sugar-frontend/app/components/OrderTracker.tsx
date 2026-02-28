@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { Phone, MessageSquare, Navigation, Timer } from 'lucide-react';
+import { Phone, MessageSquare, Navigation, Timer, Banknote } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { 
@@ -29,8 +29,7 @@ interface OrderTrackerProps {
 }
 
 const SHOP_COORDS: [number, number] = [23.7461, 90.3742];
-// FIX: Slowed down animation duration to 300 seconds (5 minutes) for realism 
-const TOTAL_DURATION = 300000; 
+const TOTAL_DURATION = 300000; // 5 minutes for realism
 const NOMINAL_DELIVERY_TIME = 35;
 
 function MapContent({ destination, currentPos, bikeIcon, shopIcon, L }: any) {
@@ -140,8 +139,9 @@ export default function OrderTracker({ address, destination, onProgressUpdate }:
                 <Timer size={10} className="text-[#8b5a2b]" />
                 <span className="text-[10px] font-black text-[#8b5a2b]">{progress < 100 ? `${timeLeft}m` : '0m'}</span>
             </div>
-            <div className="bg-[#FFE6ED] px-2 py-0.5 rounded-full">
-                <span className="text-[10px] font-black text-[#CF7486] italic">{Math.round(progress)}%</span>
+            <div className="bg-[#FFE6ED] px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Banknote size={10} className="text-[#CF7486]" />
+                <span className="text-[10px] font-black text-[#CF7486] uppercase">COD</span>
             </div>
         </div>
       </div>
@@ -176,9 +176,9 @@ export default function OrderTracker({ address, destination, onProgressUpdate }:
              </div>
           </div>
           <div className="text-right">
-             <p className="text-[8px] font-black text-[#90be6d] uppercase leading-none">ETA</p>
+             <p className="text-[8px] font-black text-[#90be6d] uppercase leading-none">Status</p>
              <p className="text-[10px] font-black text-[#8b5a2b]">
-                {progress < 100 ? `${timeLeft} mins remaining` : "Arrived"}
+                {progress < 100 ? `Pay on delivery` : "Arrived"}
              </p>
           </div>
         </div>
