@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ShoppingBag, Trash2, Minus, Plus, X, CreditCard, 
   CheckCircle, MapPin, Clock, Loader2, 
-  Globe2, Search, User, Phone, MessageSquare, Send 
+  Globe2, Search, User, Phone, MessageSquare, Send, RefreshCcw 
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -237,7 +237,7 @@ function LocationSearch({ onSelect, viewbox }: { onSelect: (addr: string, lat: n
       setLoading(true);
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=bd&viewbox=${viewbox}&bounded=1&limit=8&addressdetails=1`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=bd&viewbox=${viewbox}&bounded=1&limit=15&addressdetails=1`
         );
         const data = await res.json();
         setSuggestions(data);
@@ -272,7 +272,7 @@ function LocationSearch({ onSelect, viewbox }: { onSelect: (addr: string, lat: n
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0 }}
-            className="absolute z-[10001] w-full bg-white border-2 border-[#8b5a2b] rounded-2xl shadow-[8px_8px_0px_#FFE6ED] mt-1 overflow-y-auto max-h-[220px] custom-scrollbar"
+            className="absolute z-[10001] w-full bg-white border-2 border-[#8b5a2b] rounded-2xl shadow-[8px_8px_0px_rgba(139,90,43,0.1)] mt-1 overflow-y-auto max-h-[200px] custom-scrollbar"
           >
             {suggestions.length > 0 ? suggestions.map((s, i) => (
               <button
@@ -282,7 +282,7 @@ function LocationSearch({ onSelect, viewbox }: { onSelect: (addr: string, lat: n
                   setQuery(s.display_name);
                   setShowDropdown(false);
                 }}
-                className="w-full text-left px-4 py-3 text-[10px] font-bold text-[#8b5a2b] hover:bg-[#f0f9eb] border-b border-[#8b5a2b]/5 last:border-0 flex items-start gap-2"
+                className="w-full text-left px-4 py-3 text-[10px] font-bold text-[#8b5a2b] hover:bg-[#f0f9eb] border-b border-[#8b5a2b]/10 last:border-0 flex items-start gap-2 transition-colors"
               >
                 <Search size={12} className="shrink-0 text-[#90be6d] mt-0.5" />
                 <span className="leading-tight">{s.display_name}</span>
@@ -293,17 +293,22 @@ function LocationSearch({ onSelect, viewbox }: { onSelect: (addr: string, lat: n
           </motion.div>
         )}
       </AnimatePresence>
+
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: #fdfcf0;
-          border-radius: 10px;
+          border-radius: 0 14px 14px 0;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #8b5a2b;
           border-radius: 10px;
+          border: 2px solid #fdfcf0;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #D4A24C;
         }
       `}</style>
     </div>
@@ -321,7 +326,7 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
 
   const BD_BOUNDS = { viewbox: "88.01,20.34,92.67,26.63" };
 
-  // --- PERSISTENCE: LOAD ORDER (Line 304 approx) ---
+  // --- PERSISTENCE: LOAD ORDER ---
   useEffect(() => {
     const savedOrder = localStorage.getItem("honey_haze_order");
     if (savedOrder) {
@@ -333,8 +338,8 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
       
       if (data.startTime && data.isOrdered) {
         const elapsedSeconds = (Date.now() - data.startTime) / 1000;
-        // 0.05% every 100ms = 0.5% per second
-        const calculatedProgress = Math.min(elapsedSeconds * 0.5, 100);
+        // Progress rate in sync with Tracker (0.2% every 100ms = 2% per second)
+        const calculatedProgress = Math.min(elapsedSeconds * 2.0, 100);
         setDeliveryProgress(calculatedProgress);
       }
     }
@@ -351,8 +356,6 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
       };
       localStorage.setItem("honey_haze_order", JSON.stringify(orderData));
       if (!orderStartTime) setOrderStartTime(orderData.startTime);
-    } else {
-      localStorage.removeItem("honey_haze_order");
     }
   }, [isOrdered, address, coords, orderStartTime]);
 
@@ -390,16 +393,21 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
     setIsOrdered(true);
   };
 
+  const handleResetEverything = () => {
+    setIsOrdered(false);
+    setCart([]);
+    setAddress("");
+    setCoords(null);
+    setCancelTimer(120);
+    setDeliveryProgress(0);
+    setOrderStartTime(null);
+    localStorage.removeItem("honey_haze_order");
+    setCartOpen(false); // Close sidebar after reset
+  };
+
   const handleCancelOrder = () => {
     if (window.confirm("Cancel order and clear cart? 🍩")) {
-      setIsOrdered(false);
-      setCart([]);
-      setAddress("");
-      setCoords(null);
-      setCancelTimer(120);
-      setDeliveryProgress(0);
-      setOrderStartTime(null);
-      localStorage.removeItem("honey_haze_order");
+      handleResetEverything();
     }
   };
 
@@ -474,7 +482,6 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
                 ) : (
                   <motion.div key="tracking-view" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pb-10">
                     
-                    {/* CRITICAL SYNC POINT (Line 513) */}
                     {coords && coords[0] !== 0 && (
                       <OrderTracker 
                         address={address} 
@@ -509,9 +516,23 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
                                 Cancel Order ({Math.floor(cancelTimer / 60)}:{(cancelTimer % 60).toString().padStart(2, '0')})
                             </button>
                         ) : null}
-                        <button onClick={() => setCartOpen(false)} className="w-full bg-[#8b5a2b] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_4px_0_#5d3d1e] active:translate-y-1 transition-all">
+
+                        {deliveryProgress >= 100 ? (
+                          <button 
+                            onClick={handleResetEverything} 
+                            className="w-full bg-[#90be6d] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_4px_0_#5a7d32] active:translate-y-1 transition-all flex items-center justify-center gap-2"
+                          >
+                            <RefreshCcw size={16} />
+                            Go back to menu
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => setCartOpen(false)} 
+                            className="w-full bg-[#8b5a2b] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_4px_0_#5d3d1e] active:translate-y-1 transition-all"
+                          >
                             Close Tracker
-                        </button>
+                          </button>
+                        )}
                     </div>
                   </motion.div>
                 )}

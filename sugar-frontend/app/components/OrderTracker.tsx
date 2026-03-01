@@ -55,20 +55,21 @@ export default function OrderTracker({
   initialProgress = 0 
 }: OrderTrackerProps) {
   const [route, setRoute] = useState<LatLngTuple[]>([]);
-  const [progress, setProgress] = useState(initialProgress); // Line 55: Init with saved progress
+  const [progress, setProgress] = useState(initialProgress);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // --- SYNC HOOK (Line 60): Catches up the rider when tab reopens ---
+  // Sync with initialProgress from localStorage/Parent
   useEffect(() => {
     if (initialProgress > progress) {
       setProgress(initialProgress);
     }
   }, [initialProgress]);
 
+  // Fetch Route from OSRM
   useEffect(() => {
-    if (!destination || destination.length < 2) return;
+    if (!destination || destination[0] === 0) return;
     
     const getRoute = async () => {
       try {
@@ -87,28 +88,36 @@ export default function OrderTracker({
       }
     };
     getRoute();
-  }, [JSON.stringify(destination)]);
+  }, [destination]);
 
+  // --- MEDIUM SPEED MOVEMENT ---
   useEffect(() => {
     if (route.length < 2 || progress >= 100) return;
+
     const interval = setInterval(() => {
       setProgress((prev) => {
-        const next = prev + 0.05; 
+        // 0.2 increment = ~50 seconds total delivery time
+        const next = prev + 0.2; 
         return next >= 100 ? 100 : next;
       });
     }, 100);
+
     return () => clearInterval(interval);
   }, [route, progress]);
 
+  // Calculate current rider index on the route
   const splitIndex = useMemo(() => {
-    return Math.floor((route.length - 1) * (progress / 100));
+    if (route.length === 0) return 0;
+    return Math.min(Math.floor((route.length - 1) * (progress / 100)), route.length - 1);
   }, [route, progress]);
 
+  // Current GPS Coordinate for Rider
   const currentPos = useMemo(() => {
     if (route.length === 0) return SHOP_START;
-    return (route[splitIndex] as LatLngTuple) || SHOP_START;
+    return route[splitIndex] || SHOP_START;
   }, [route, splitIndex]);
 
+  // Notify parent of progress
   useEffect(() => {
     if (onProgressUpdate) onProgressUpdate(Math.floor(progress));
   }, [progress, onProgressUpdate]);
@@ -125,45 +134,54 @@ export default function OrderTracker({
             <>
               <MapController route={route} />
               
-              {/* 1. THE RUSTY RED PATH (Future journey) */}
+              {/* THE REMAINING PATH (Dashed) */}
               <Polyline 
                 positions={route.slice(splitIndex)} 
                 pathOptions={{ 
-                  color: '#A52A2A', 
-                  weight: 4, 
-                  dashArray: '2, 10', 
-                  opacity: 0.7 
+                  color: '#8b5a2b', 
+                  weight: 3, 
+                  dashArray: '5, 10', 
+                  opacity: 0.4 
                 }} 
               />
               
-              {/* 2. THE GREEN PATH (Traveled journey) */}
+              {/* THE COMPLETED PATH (Solid Green) */}
               <Polyline 
                 positions={route.slice(0, splitIndex + 1)} 
-                pathOptions={{ color: '#90be6d', weight: 5 }} 
+                pathOptions={{ 
+                  color: '#90be6d', 
+                  weight: 5,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }} 
               />
             </>
           )}
 
-          {/* Honey Haze Emoji Pin */}
+          {/* Markers */}
           {cafeEmojiIcon && <Marker position={SHOP_START} icon={cafeEmojiIcon} />}
-          
-          {/* Rider Marker */}
           {riderIcon && <Marker position={currentPos} icon={riderIcon} />}
-          
-          {/* Destination Marker */}
           {destinationIcon && <Marker position={destination} icon={destinationIcon} />}
         </MapContainer>
       </div>
 
+      {/* Progress Card */}
       <div className="bg-white border-2 border-[#8b5a2b] p-4 rounded-2xl shadow-[4px_4px_0px_rgba(139,90,43,0.1)]">
         <div className="flex justify-between items-end mb-2">
-          <span className="text-[10px] font-black text-[#8b5a2b] uppercase tracking-widest">Delivery Status</span>
+          <div className="flex flex-col">
+             <span className="text-[10px] font-black text-[#8b5a2b] uppercase tracking-widest">Live Tracking</span>
+             <span className="text-[9px] font-bold text-[#8b5a2b]/60">Sagor is picking up speed...</span>
+          </div>
           <span className="text-sm font-black text-[#D4A24C]">{Math.floor(progress)}%</span>
         </div>
+        
         <div className="h-3 w-full bg-[#fdfcf0] border-2 border-[#8b5a2b] rounded-full overflow-hidden">
           <div 
-            className="h-full bg-[#90be6d] transition-all duration-300 ease-linear" 
-            style={{ width: `${progress}%` }}
+            className="h-full bg-[#90be6d] transition-all duration-300" 
+            style={{ 
+              width: `${progress}%`,
+              transitionTimingFunction: 'linear'
+            }}
           />
         </div>
       </div>
