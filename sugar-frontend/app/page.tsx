@@ -4,8 +4,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import Cart, { CartItem } from "./components/Cart";
 
-// 🌸 BACKUP DATA: This stays here forever. 
-// If Neon is down or you are on localhost, the site still looks perfect.
+// 🌸 BACKUP DATA
 const backupFoods: FoodItem[] = [
   { id: 1, name: "Honey Glazed Donut", price: 120, type: "sweet", description: "Soft, fluffy, and dripping with organic honey.", image: "/images/donut.jpg" },
   { id: 2, name: "Spicy Naga Pasta", price: 350, type: "spicy", description: "Extreme heat for the brave souls.", image: "/images/pasta.jpg" },
@@ -30,22 +29,20 @@ export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  
+  // NEW: State to track if an order is currently active
+  const [isOrdered, setIsOrdered] = useState(false);
 
   useEffect(() => {
     setHasMounted(true); 
-    
     async function loadFoods() {
       try {
         const res = await fetch("/api/foods");
-        
-        // If the server returns HTML (The <!DOCTYPE error), this will catch it
         const contentType = res.headers.get("content-type");
         if (!res.ok || !contentType || !contentType.includes("application/json")) {
           throw new Error("API returned non-JSON response");
         }
-
         const data = await res.json();
-        // If data is empty or not an array, use backup
         setFoods(Array.isArray(data) && data.length > 0 ? data : backupFoods);
       } catch (err) {
         console.warn("Neon DB unreachable. Using local backup menu. 🌸", err);
@@ -54,15 +51,22 @@ export default function Home() {
         setLoading(false);
       }
     }
-
     loadFoods();
   }, []);
 
   const removeFromCart = (id: string) => {
+    if (isOrdered) return; // Prevent removal during delivery
     setCart(prev => prev.filter(item => item._id !== id));
   };
 
   const addToCart = (item: FoodItem) => {
+    // Prevent adding if an order is already placed
+    if (isOrdered) {
+      setNotification("Finish your current order first! 🛵");
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
     const foodIdStr = String(item.id);
     const itemPrice = item.price || 150;
 
@@ -109,40 +113,17 @@ export default function Home() {
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 20 }}
             exit={{ opacity: 0, y: -50 }}
-            className="fixed top-4 z-[100] bg-[#82A899] text-white px-6 py-3 rounded-full font-bold shadow-lg border-2 border-white flex items-center gap-2"
+            className={`fixed top-4 z-[100] ${isOrdered ? 'bg-orange-500' : 'bg-[#82A899]'} text-white px-6 py-3 rounded-full font-bold shadow-lg border-2 border-white flex items-center gap-2`}
           >
-            <span>✅</span> {notification}
+            <span>{isOrdered ? "⚠️" : "✅"}</span> {notification}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating Background Icons */}
-      <div className="absolute inset-0 pointer-events-none z-[5]">
-        {bgIcons.map((item, i) => (
-          <motion.div
-            key={`bg-icon-${i}`}
-            className="absolute text-5xl"
-            style={{ top: item.top, left: item.left, opacity: 0.35 }}
-            animate={{ y: [0, 10, 0], rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 5 + (i % 4), repeat: Infinity, ease: "easeInOut" }}
-          >
-            {item.icon}
-          </motion.div>
-        ))}
-      </div>
-
       {/* Hero Section */}
       <div className="relative w-screen h-[400px] md:h-[500px] flex flex-col items-center justify-center z-10">
-        <Image 
-          src="/images/new-hero.jpg" 
-          alt="Hero" 
-          fill 
-          className="object-cover" 
-          priority 
-          unoptimized 
-        />
+        <Image src="/images/new-hero.jpg" alt="Hero" fill className="object-cover" priority unoptimized />
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
-        
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
           <motion.h1
             className="text-5xl sm:text-7xl font-extrabold"
@@ -183,16 +164,15 @@ export default function Home() {
               key={`food-card-${food.id}`}
               layout
               className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border-4 border-[#8A5559] flex flex-col"
-              whileHover={{ y: -5 }}
+              whileHover={!isOrdered ? { y: -5 } : {}}
             >
               <div className="relative w-full h-48">
-                <Image 
-                  src={food.image || "/images/logo.jpg"} 
-                  alt={food.name} 
-                  fill 
-                  className="object-cover" 
-                  unoptimized 
-                />
+                <Image src={food.image || "/images/logo.jpg"} alt={food.name} fill className="object-cover" unoptimized />
+                {isOrdered && (
+                  <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">
+                    <span className="bg-[#8A5559] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Locked</span>
+                  </div>
+                )}
               </div>
               <div className="p-5 flex flex-col flex-grow text-left">
                 <h3 className="text-lg font-black text-[#C98895] uppercase">{food.name}</h3>
@@ -201,9 +181,14 @@ export default function Home() {
                    <span className="text-lg font-black text-[#D4A24C]">৳ {food.price}</span>
                    <button
                     onClick={() => addToCart(food)}
-                    className="bg-[#D4A24C] hover:bg-[#C98895] text-white font-black py-2 px-4 rounded-full text-xs shadow-md transition-all active:scale-90"
+                    disabled={isOrdered}
+                    className={`font-black py-2 px-4 rounded-full text-xs shadow-md transition-all active:scale-90 ${
+                      isOrdered 
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+                        : "bg-[#D4A24C] hover:bg-[#C98895] text-white"
+                    }`}
                   >
-                    ADD +
+                    {isOrdered ? "ON WAY 🛵" : "ADD +"}
                   </button>
                 </div>
               </div>
@@ -217,20 +202,22 @@ export default function Home() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setCartOpen(true)}
-        className="fixed bottom-8 right-8 z-[50] bg-[#D4A24C] text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black ring-4 ring-white"
+        className={`fixed bottom-8 right-8 z-[50] text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black ring-4 ring-white ${
+          isOrdered ? "bg-[#90be6d]" : "bg-[#D4A24C]"
+        }`}
       >
-        <span className="text-xl">🛒</span>
+        <span className="text-xl">{isOrdered ? "🛵" : "🛒"}</span>
         <motion.span 
           key={cartCount}
           initial={{ scale: 1.5 }}
           animate={{ scale: 1 }}
-          className="bg-white text-[#D4A24C] px-2 py-0.5 rounded-lg text-sm"
+          className={`px-2 py-0.5 rounded-lg text-sm ${isOrdered ? 'bg-white text-[#90be6d]' : 'bg-white text-[#D4A24C]'}`}
         >
-          {cartCount}
+          {isOrdered ? "TRACK" : cartCount}
         </motion.span>
       </motion.button>
 
-      {/* Cart Drawer */}
+      {/* Updated Cart Drawer with Order State */}
       <Cart
         cart={cart}
         cartOpen={cartOpen}
@@ -238,6 +225,8 @@ export default function Home() {
         setCart={setCart}
         removeFromCart={removeFromCart}
         total={total}
+        isOrdered={isOrdered}
+        setIsOrdered={setIsOrdered}
       />
     </main>
   );
