@@ -36,7 +36,7 @@ const destinationIcon = typeof window !== 'undefined' ? L.icon({
 // CAFE ICON (Honeypot Emoji 🍯)
 const cafeEmojiIcon = typeof window !== 'undefined' ? L.divIcon({
   html: `<div style="font-size: 24px; filter: drop-shadow(2px 2px 0px rgba(0,0,0,0.1));">🍯</div>`,
-  className: "custom-div-icon", // Prevents Leaflet from adding default white square styles
+  className: "custom-div-icon", 
   iconSize: [30, 30],
   iconAnchor: [15, 25]
 }) : null;
@@ -45,14 +45,27 @@ interface OrderTrackerProps {
   address?: string;
   destination: LatLngTuple;
   onProgressUpdate?: (progress: number) => void;
+  initialProgress?: number;
 }
 
-export default function OrderTracker({ address, destination, onProgressUpdate }: OrderTrackerProps) {
+export default function OrderTracker({ 
+  address, 
+  destination, 
+  onProgressUpdate, 
+  initialProgress = 0 
+}: OrderTrackerProps) {
   const [route, setRoute] = useState<LatLngTuple[]>([]);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(initialProgress); // Line 55: Init with saved progress
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // --- SYNC HOOK (Line 60): Catches up the rider when tab reopens ---
+  useEffect(() => {
+    if (initialProgress > progress) {
+      setProgress(initialProgress);
+    }
+  }, [initialProgress]);
 
   useEffect(() => {
     if (!destination || destination.length < 2) return;

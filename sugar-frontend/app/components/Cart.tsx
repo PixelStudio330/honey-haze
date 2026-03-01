@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
-// Dynamic import with SSR disabled is correct for Leaflet
+// Dynamic import with SSR disabled
 const OrderTracker = dynamic(() => import("./OrderTracker"), { 
   ssr: false,
   loading: () => (
@@ -317,8 +317,44 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
   const [deliveryProgress, setDeliveryProgress] = useState(0);
   const [cancelTimer, setCancelTimer] = useState(120); 
   const [canCancel, setCanCancel] = useState(true);
+  const [orderStartTime, setOrderStartTime] = useState<number | null>(null);
 
   const BD_BOUNDS = { viewbox: "88.01,20.34,92.67,26.63" };
+
+  // --- PERSISTENCE: LOAD ORDER (Line 304 approx) ---
+  useEffect(() => {
+    const savedOrder = localStorage.getItem("honey_haze_order");
+    if (savedOrder) {
+      const data = JSON.parse(savedOrder);
+      setAddress(data.address);
+      setCoords(data.coords);
+      setIsOrdered(data.isOrdered);
+      setOrderStartTime(data.startTime);
+      
+      if (data.startTime && data.isOrdered) {
+        const elapsedSeconds = (Date.now() - data.startTime) / 1000;
+        // 0.05% every 100ms = 0.5% per second
+        const calculatedProgress = Math.min(elapsedSeconds * 0.5, 100);
+        setDeliveryProgress(calculatedProgress);
+      }
+    }
+  }, [setIsOrdered]);
+
+  // --- PERSISTENCE: SAVE ORDER ---
+  useEffect(() => {
+    if (isOrdered) {
+      const orderData = {
+        address,
+        coords,
+        isOrdered,
+        startTime: orderStartTime || Date.now(),
+      };
+      localStorage.setItem("honey_haze_order", JSON.stringify(orderData));
+      if (!orderStartTime) setOrderStartTime(orderData.startTime);
+    } else {
+      localStorage.removeItem("honey_haze_order");
+    }
+  }, [isOrdered, address, coords, orderStartTime]);
 
   const handleProgressUpdate = useCallback((p: number) => {
     setDeliveryProgress(p);
@@ -350,6 +386,7 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
       alert("Please select a valid Bangladesh address! 🇧🇩");
       return;
     }
+    setOrderStartTime(Date.now());
     setIsOrdered(true);
   };
 
@@ -361,14 +398,17 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
       setCoords(null);
       setCancelTimer(120);
       setDeliveryProgress(0);
+      setOrderStartTime(null);
+      localStorage.removeItem("honey_haze_order");
     }
   };
 
   const deliveryTime = useMemo(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + 35);
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }, [isOrdered]);
+    const timeToUse = orderStartTime || Date.now();
+    const arrivalTime = new Date(timeToUse);
+    arrivalTime.setMinutes(arrivalTime.getMinutes() + 35);
+    return arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, [isOrdered, orderStartTime]);
 
   return (
     <AnimatePresence>
@@ -434,24 +474,24 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
                 ) : (
                   <motion.div key="tracking-view" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pb-10">
                     
-                    {/* CRITICAL FIX: Only mount Tracker if coords are present */}
+                    {/* CRITICAL SYNC POINT (Line 513) */}
                     {coords && coords[0] !== 0 && (
                       <OrderTracker 
                         address={address} 
                         destination={coords} 
                         onProgressUpdate={handleProgressUpdate} 
+                        initialProgress={deliveryProgress} 
                       />
                     )}
 
                     <MemoReceipt 
                         items={cart} 
                         total={total} 
-                        orderId={`HH-${Math.floor(Date.now() / 100000)}`} 
+                        orderId={`HH-${Math.floor((orderStartTime || Date.now()) / 100000)}`} 
                     />
 
                     <RiderChat progress={deliveryProgress} total={total} />
 
-                    {/* STATUS CARD WITH FULL ADDRESS */}
                     <div className="bg-white border-2 border-[#8b5a2b] rounded-2xl p-4 shadow-[4px_4px_0px_#8b5a2b] space-y-3">
                         <div className="flex items-start gap-3 text-[11px] font-black text-[#8b5a2b]">
                             <MapPin size={16} className="text-[#CF7486] shrink-0 mt-0.5" />
@@ -485,7 +525,6 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOr
                   viewbox={BD_BOUNDS.viewbox}
                   onSelect={(addr, lat, lon) => { 
                     setAddress(addr); 
-                    // Explicitly set as a typed array to prevent Leaflet null errors
                     setCoords([lat, lon]); 
                   }}
                 />
