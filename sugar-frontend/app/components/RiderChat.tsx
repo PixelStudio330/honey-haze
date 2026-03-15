@@ -70,7 +70,7 @@ export default function RiderChat({ orderId, progress, deliveryTime }: Props) {
     // A. Packing Message
     const alreadySentPacking = localStorage.getItem(PACKING_KEY) === "true";
     if (progress <= 0 && !alreadySentPacking) {
-      const packingText = "Sir! Honey Haze e apnar order packing cholche. Just 2 more minutes! 🍯✨";
+      const packingText = "Sir! Honey Haze e apnar order packing cholche. Just 20 more seconds! 🍯✨";
       setMessages(prev => [...prev, { role: 'rider', text: packingText }]);
       localStorage.setItem(PACKING_KEY, "true");
       notifyUser();

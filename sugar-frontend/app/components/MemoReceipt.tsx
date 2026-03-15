@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CheckCircle2, User, Phone, MapPin } from "lucide-react";
+import { Clock, CheckCircle2, User, Phone, MapPin, Package } from "lucide-react";
 
 interface MemoItem {
   name: string;
@@ -19,6 +18,9 @@ interface MemoReceiptProps {
   customerName?: string;
   phoneNumber?: string;
   address?: string;
+  // New Props to track real status
+  isAccepted?: boolean; 
+  progress?: number;
 }
 
 export default function MemoReceipt({ 
@@ -28,24 +30,20 @@ export default function MemoReceipt({
   date, 
   customerName = "Guest", 
   phoneNumber = "Not Provided",
-  address = "Store Pickup"
+  address = "Store Pickup",
+  isAccepted = false,
+  progress = 0
 }: MemoReceiptProps) {
   const deliveryFee = 50;
-  const [isAccepted, setIsAccepted] = useState(false);
   
+  // Logic: The order is "Accepted" if the parent says so OR if the rider has started moving
+  const hasBeenAccepted = isAccepted || progress > 0;
+
   const formattedTime = new Date(date || Date.now()).toLocaleTimeString([], { 
     hour: '2-digit', 
     minute: '2-digit',
     hour12: true 
   });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsAccepted(true);
-    }, 12000); 
-
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <motion.div 
@@ -74,14 +72,15 @@ export default function MemoReceipt({
             <span>Placed At: {formattedTime}</span>
           </div>
           <AnimatePresence mode="wait">
-            {!isAccepted ? (
+            {!hasBeenAccepted ? (
               <motion.span 
                 key="pending"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="px-2 py-0.5 bg-[#FFE6ED] text-[#8b5a2b] border border-[#8b5a2b] rounded-full animate-pulse"
+                className="px-2 py-0.5 bg-[#FFE6ED] text-[#8b5a2b] border border-[#8b5a2b] rounded-full flex items-center gap-1"
               >
+                <Package size={10} className="animate-pulse" />
                 Waiting for Shop...
               </motion.span>
             ) : (
@@ -91,7 +90,7 @@ export default function MemoReceipt({
                 animate={{ scale: 1, opacity: 1 }}
                 className="px-2 py-0.5 bg-[#90be6d] text-white border border-[#8b5a2b] rounded-full flex items-center gap-1"
               >
-                <CheckCircle2 size={8} />
+                <CheckCircle2 size={10} />
                 Order Accepted
               </motion.span>
             )}
