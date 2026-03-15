@@ -15,12 +15,15 @@ export interface CartItem {
   image: string;
 }
 
+// Fixed Interface: Added isOrdered and setIsOrdered to match layout.tsx
 interface CartProps {
   cart: CartItem[];
   cartOpen: boolean;
   setCartOpen: (open: boolean) => void;
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   total: number;
+  isOrdered: boolean;
+  setIsOrdered: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 function LocationSearch({ onSelect }: { onSelect: (addr: string, lat: number, lon: number) => void }) {
@@ -110,7 +113,8 @@ function LocationSearch({ onSelect }: { onSelect: (addr: string, lat: number, lo
   );
 }
 
-export default function Cart({ cart, cartOpen, setCartOpen, setCart, total }: CartProps) {
+// Added isOrdered and setIsOrdered to the component props
+export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOrdered, setIsOrdered }: CartProps) {
   const router = useRouter();
   const [address, setAddress] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -166,6 +170,8 @@ export default function Cart({ cart, cartOpen, setCartOpen, setCart, total }: Ca
     const existing = JSON.parse(localStorage.getItem("honey_haze_orders") || "[]");
     localStorage.setItem("honey_haze_orders", JSON.stringify([newOrder, ...existing]));
     
+    // Set order state if needed for UI feedback
+    setIsOrdered(true);
     syncAndSave([]); 
     setCartOpen(false); 
     router.push("/order-history"); 
