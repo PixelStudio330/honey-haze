@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { toast, Toaster } from "react-hot-toast";
 import RiderChat from "../components/RiderChat";
 import MemoReceipt from "../components/MemoReceipt";
 import RiderReview from "../components/RiderReview";
@@ -18,7 +19,6 @@ const OrderTracker = dynamic(() => import("../components/OrderTracker"), {
   loading: () => <div className="h-[350px] w-full bg-[#fdfcf0] animate-pulse flex items-center justify-center text-[10px] font-black uppercase text-[#8b5a2b]">Initializing Radar...</div>
 });
 
-// A stable wrapper to prevent Leaflet "container already initialized" errors
 const MapWrapper = memo(({ orderId, destination, progress }: { orderId: string, destination: [number, number], progress: number }) => (
   <div id={`map-holder-${orderId}`} className="h-[350px] w-full relative">
     <OrderTracker 
@@ -55,6 +55,14 @@ export default function OrderHistory() {
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [acceptedOrders, setAcceptedOrders] = useState<Record<string, boolean>>({});
 
+  const defaultAvatars = [
+    "/images/avatars/sakura.jpg",
+    "/images/avatars/cupcake.jpg",
+    "/images/avatars/pancake.jpg",
+    "/images/avatars/coffee.jpg",
+    "/images/avatars/cake.jpg"
+  ];
+
   useEffect(() => {
     const savedOrders = localStorage.getItem("honey_haze_orders");
     const savedAccepted = localStorage.getItem("honey_haze_accepted");
@@ -63,7 +71,9 @@ export default function OrderHistory() {
       const parsed = JSON.parse(savedOrders);
       setOrders(parsed);
       const initialState: Record<string, boolean> = {};
-      parsed.forEach((o: Order) => initialState[o.id] = false); 
+      parsed.forEach((o: Order) => {
+        initialState[o.id] = true; 
+      });
       setExpandedMap(initialState);
     }
 
@@ -91,6 +101,44 @@ export default function OrderHistory() {
     const elapsed = now - startTime;
     if (elapsed < 20000) return { text: "Packing...", color: "text-amber-500", icon: <Package size={14} className="animate-pulse" /> };
     return { text: "Incoming...", color: "text-orange-500", icon: <Bike size={14} className="animate-bounce" /> };
+  };
+
+  const handleSaveReview = (reviewData: any, order: Order, riderId: string) => {
+    const existingReviews = JSON.parse(localStorage.getItem("honey_haze_public_reviews") || "[]");
+    
+    const randomAvatar = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
+    
+    const newReview = {
+      id: Date.now(),
+      name: order.customerName || "Valued Customer",
+      comment: reviewData.comment || "No comment provided.",
+      rating: reviewData.rating || 5,
+      avatar: randomAvatar,
+      orderId: order.id,
+      riderId: riderId,
+      timestamp: Date.now(),
+      items: order.items.map(i => i.name)
+    };
+
+    const updatedReviews = [newReview, ...existingReviews];
+    localStorage.setItem("honey_haze_public_reviews", JSON.stringify(updatedReviews));
+    
+    toast.success("Added To The Review Archive!", {
+      style: {
+        border: '3px solid #8b5a2b',
+        padding: '16px',
+        color: '#8b5a2b',
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        fontSize: '12px',
+        borderRadius: '20px',
+        background: '#FFE6ED',
+      },
+      iconTheme: {
+        primary: '#8b5a2b',
+        secondary: '#fff',
+      },
+    });
   };
 
   const handleAcceptOrder = (id: string) => {
@@ -129,6 +177,7 @@ export default function OrderHistory() {
 
   return (
     <div className="min-h-screen bg-[#fffdf5] pb-20">
+      <Toaster position="bottom-center" />
       <header className="sticky top-0 z-[9999] bg-[#FFE6ED] border-b-[3px] border-[#8b5a2b] p-6 shadow-sm">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -157,7 +206,7 @@ export default function OrderHistory() {
               const progress = calculateProgress(order.startTime);
               const isAccepted = acceptedOrders[order.id];
               const status = getStatus(order.startTime, progress, order.id);
-              const isMapOpen = expandedMap[order.id];
+              const isMapOpen = expandedMap[order.id] ?? true;
 
               let resolvedDestination = order.coords;
               const addr = order.address.toLowerCase();
@@ -232,15 +281,15 @@ export default function OrderHistory() {
                       {progress >= 100 && !isAccepted && (
                         <div className="p-6 bg-[#fdfcf0] border-t-[3px] border-[#8b5a2b] space-y-6">
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
-                                <RiderReview 
-                                  riderName="Rider #204" 
-                                  onSave={(data) => console.log("Review saved:", data)} 
-                                />
-                              </div>
-                              <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
-                                <TipJar />
-                              </div>
+                             <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
+                               <RiderReview 
+                                 riderName="Rider #204" 
+                                 onSave={(data) => handleSaveReview(data, order, "rider_204")} 
+                               />
+                             </div>
+                             <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
+                               <TipJar />
+                             </div>
                            </div>
                            
                            <button 

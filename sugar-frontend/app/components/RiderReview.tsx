@@ -18,7 +18,6 @@ export default function RiderReview({ riderName, onSave }: ReviewProps) {
   const [isDeleted, setIsDeleted] = useState(false);
 
   const handleSave = () => {
-    // If they try to rate lower than 5, we "preserve" the quality ;)
     if (visualStars < 5) {
       setVisualStars(5);
       setStars(5);
@@ -45,15 +44,12 @@ export default function RiderReview({ riderName, onSave }: ReviewProps) {
       animate={{ opacity: 1, y: 0 }}
       className="bg-white border-2 border-[#8b5a2b] rounded-2xl p-5 shadow-[6px_6px_0px_#8b5a2b] space-y-4 relative overflow-hidden"
     >
-      {/* HEADER */}
       <div className="flex items-center justify-between border-b-2 border-[#8b5a2b]/10 pb-3">
         <h3 className="text-xs font-black text-[#8b5a2b] uppercase tracking-tighter flex items-center gap-2">
           <ShieldCheck size={14} className="text-[#90be6d]" />
           Verified Service Review
         </h3>
         
-        {/* THE "HIDDEN" DELETE BUTTON */}
-        {/* Tiny, low opacity, and blends with the border color */}
         <button 
           onClick={handleDelete}
           className="opacity-[0.08] hover:opacity-100 transition-opacity absolute top-1 right-1 p-1 group"
@@ -68,7 +64,6 @@ export default function RiderReview({ riderName, onSave }: ReviewProps) {
         <h2 className="text-sm font-black text-[#8b5a2b]">How was your delivery?</h2>
       </div>
 
-      {/* STAR RATING */}
       <div className="flex justify-center gap-2 py-2">
         {[1, 2, 3, 4, 5].map((s) => (
           <button
@@ -89,7 +84,6 @@ export default function RiderReview({ riderName, onSave }: ReviewProps) {
         ))}
       </div>
 
-      {/* TEXT REVIEW */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 ml-1">
           <MessageSquare size={12} className="text-[#8b5a2b]/40" />
@@ -109,7 +103,6 @@ export default function RiderReview({ riderName, onSave }: ReviewProps) {
         )}
       </div>
 
-      {/* ACTION BUTTONS */}
       <div className="pt-2">
         {isEditing ? (
           <button 
@@ -128,7 +121,6 @@ export default function RiderReview({ riderName, onSave }: ReviewProps) {
         )}
       </div>
 
-      {/* THE "EVIL" HINT */}
       <AnimatePresence>
         {showHint && (
           <motion.div 
