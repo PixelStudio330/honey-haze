@@ -1,28 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ShoppingBag, Trash2, Minus, Plus, X, CreditCard, 
-  CheckCircle, MapPin, Clock, Loader2, 
-  Globe2, Search, User, Phone, MessageSquare, Send, RefreshCcw 
-} from "lucide-react";
-import dynamic from "next/dynamic";
-// Import your new components here
-import RiderReview from "./RiderReview"; 
-import { TipJar } from "./TipJar";
-
-// Dynamic import with SSR disabled
-const OrderTracker = dynamic(() => import("./OrderTracker"), { 
-  ssr: false,
-  loading: () => (
-    <div className="h-48 w-full bg-[#fdfcf0] animate-pulse rounded-2xl flex flex-col items-center justify-center border-2 border-[#8b5a2b] border-dashed">
-      <Loader2 className="animate-spin text-[#8b5a2b] mb-2" size={20} />
-      <span className="text-[10px] font-bold text-[#8b5a2b] uppercase">Initializing GPS...</span>
-    </div>
-  )
-}); 
+import { ShoppingBag, Minus, Plus, X, MapPin, Loader2, Navigation, Trash2, User, Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export interface CartItem {
   _id: string;
@@ -37,480 +19,303 @@ interface CartProps {
   cart: CartItem[];
   cartOpen: boolean;
   setCartOpen: (open: boolean) => void;
-  setCart: (cart: CartItem[] | ((prev: CartItem[]) => CartItem[])) => void;
-  removeFromCart: (id: string) => void;
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   total: number;
-  isOrdered: boolean;
-  setIsOrdered: (val: boolean) => void;
 }
 
-// --- SUB-COMPONENT: AESTHETIC ORDER MEMO ---
-function MemoReceipt({ items, total, orderId }: { items: CartItem[], total: number, orderId: string }) {
-  const deliveryFee = 50;
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="relative w-full bg-white border-x-2 border-t-2 border-[#8b5a2b] pt-8 px-6 pb-10 shadow-[6px_6px_0px_rgba(139,90,43,0.08)] overflow-hidden"
-    >
-      <div className="absolute left-2 top-0 bottom-0 flex flex-col justify-around py-6 pointer-events-none">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full bg-[#fffdf5] border-2 border-[#8b5a2b]" />
-        ))}
-      </div>
-
-      <div className="text-center mb-6">
-        <h3 className="font-black text-[#8b5a2b] text-sm uppercase tracking-[0.2em]">Honey Haze</h3>
-        <p className="text-[9px] font-bold text-[#8b5a2b]/40 uppercase tracking-widest">Order Summary Memo</p>
-      </div>
-
-      <div className="flex justify-between text-[9px] font-mono font-bold text-[#8b5a2b]/60 mb-6 border-b border-dashed border-[#8b5a2b]/20 pb-2">
-        <span>REF: {orderId}</span>
-        <span>{new Date().toLocaleDateString()}</span>
-      </div>
-
-      <div className="space-y-4 mb-6">
-        {items.map((item, idx) => (
-          <div key={idx} className="flex justify-between items-start text-[#8b5a2b]">
-            <div className="flex flex-col max-w-[70%]">
-              <span className="font-black text-[10px] uppercase leading-tight">{item.name}</span>
-              <span className="font-mono text-[9px] opacity-60">QTY: {item.qty} x ৳{item.price}</span>
-            </div>
-            <span className="font-mono font-black text-xs">৳{(item.qty * item.price).toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="space-y-1.5 border-t-2 border-dashed border-[#8b5a2b]/10 pt-4">
-        <div className="flex justify-between text-[9px] font-bold text-[#8b5a2b]/50 uppercase">
-          <span>Subtotal</span>
-          <span>৳{total.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between items-center pt-2">
-          <span className="font-black text-xs text-[#8b5a2b] uppercase tracking-tighter">Amount Payable</span>
-          <span className="text-lg font-black text-[#D4A24C]">৳{(total + deliveryFee).toLocaleString()}</span>
-        </div>
-      </div>
-
-      <div className="absolute bottom-0 left-[-2px] right-[-2px] translate-y-[1px]">
-        <svg viewBox="0 0 100 10" preserveAspectRatio="none" className="w-full h-4 fill-[#fffdf5] stroke-[#8b5a2b] stroke-[0.5]">
-          <path d="M0 0 L5 8 L10 0 L15 8 L20 0 L25 8 L30 0 L35 8 L40 0 L45 8 L50 0 L55 8 L60 0 L65 8 L70 0 L75 8 L80 0 L85 8 L90 0 L95 8 L100 0 V10 H0 Z" />
-        </svg>
-      </div>
-    </motion.div>
-  );
-}
-
-// --- SUB-COMPONENT: AI RIDER CHAT ---
-function RiderChat({ progress, total }: { progress: number; total: number }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<{role: 'rider' | 'user', text: string}[]>([
-    { role: 'rider', text: "Hey! I've picked up your treats. On my way! 🛵" }
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [hasAskedForTip, setHasAskedForTip] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-beg for tip when arrived
-  useEffect(() => {
-    if (progress >= 100 && !hasAskedForTip) {
-      setHasAskedForTip(true);
-      setTimeout(() => {
-        setMessages(prev => [...prev, { role: 'rider', text: "I've arrived! Hope you enjoy the food. A small tip would really help my fuel costs! ⛽🍩" }]);
-        setIsOpen(true); // Pop it open so they see the message
-      }, 1500);
-    }
-  }, [progress, hasAskedForTip]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    const userMsg = input;
-    setInput("");
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsTyping(true);
-
-    try {
-      const res = await fetch("/api/rider-chat", {
-        method: "POST",
-        body: JSON.stringify({ 
-          message: userMsg, 
-          riderName: "Sagor", 
-          progress: Math.floor(progress),
-          total: total + 50 
-        }),
-      });
-      const data = await res.json();
-      setMessages(prev => [...prev, { role: 'rider', text: data.text }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'rider', text: "Signal is weak in this alley! 🛵" }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  return (
-    <div className="bg-white border-2 border-[#8b5a2b] rounded-2xl shadow-[4px_4px_0px_#8b5a2b] overflow-hidden">
-      <div className="p-4 flex items-center justify-between border-b-2 border-[#8b5a2b]/10">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-[#FFE6ED] rounded-full border-2 border-[#8b5a2b] flex items-center justify-center">
-             <User className="text-[#8b5a2b]" size={20} />
-          </div>
-          <div>
-            <h4 className="text-[10px] font-black text-[#8b5a2b] uppercase">Sagor (Rider)</h4>
-            <p className={`text-[9px] font-bold flex items-center gap-1 ${progress >= 100 ? 'text-[#90be6d]' : 'text-orange-500'}`}>
-              <span className={progress < 100 ? "animate-pulse" : ""}>●</span> 
-              {progress < 100 ? 'On the way' : 'Arrived at location'}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 border-2 border-[#8b5a2b] rounded-xl transition-all ${isOpen ? 'bg-[#8b5a2b] text-white' : 'bg-[#fdfcf0] text-[#8b5a2b]'}`}
-          >
-            <MessageSquare size={14} />
-          </button>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div initial={{ height: 0 }} animate={{ height: 250 }} exit={{ height: 0 }} className="flex flex-col bg-[#fdfcf0]">
-            <div ref={scrollRef} className="flex-grow overflow-y-auto p-4 space-y-3">
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] p-2 rounded-xl text-[10px] font-bold ${
-                    m.role === 'user' ? 'bg-[#8b5a2b] text-white rounded-tr-none' : 'bg-white border border-[#8b5a2b]/20 text-[#8b5a2b] rounded-tl-none'
-                  }`}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="p-3 border-t-2 border-[#8b5a2b]/10 flex gap-2">
-              <input 
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Message Sagor..."
-                className="flex-grow bg-white border-2 border-[#8b5a2b] rounded-lg px-3 py-1 text-[10px] font-bold focus:outline-none"
-              />
-              <button onClick={handleSend} className="p-2 bg-[#90be6d] text-white rounded-lg border-2 border-[#8b5a2b]">
-                <Send size={12} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// --- SUB-COMPONENT: BD-ONLY SEARCH ---
-function LocationSearch({ onSelect, viewbox }: { onSelect: (addr: string, lat: number, lon: number) => void, viewbox: string }) {
+function LocationSearch({ onSelect }: { onSelect: (addr: string, lat: number, lon: number) => void }) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
-    if (isSelected || query.length < 1) {
+    if (isSelected || query.length < 2) {
       setSuggestions([]);
       setShowDropdown(false);
       return;
     }
     const timer = setTimeout(async () => {
-      setLoading(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=bd&viewbox=${viewbox}&bounded=1&limit=10&addressdetails=1`
-        );
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=bd&limit=6`);
         const data = await res.json();
-        if (!isSelected) {
-          setSuggestions(data);
-          setShowDropdown(true);
-        }
+        setSuggestions(data);
+        setShowDropdown(true);
       } catch (err) {
-        console.error("Geocoding failed", err);
-      } finally {
-        setLoading(false);
+        console.error(err);
       }
-    }, 300); 
+    }, 400); 
     return () => clearTimeout(timer);
-  }, [query, viewbox, isSelected]);
+  }, [query, isSelected]);
 
-  const handleInputChange = (val: string) => {
-    setQuery(val);
-    if (val === "") {
-      onSelect("", 0, 0);
-      setIsSelected(false);
-    }
+  const handleGPS = () => {
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          const addr = data.display_name || "Pinned Location";
+          setQuery(addr);
+          onSelect(addr, latitude, longitude);
+          setIsSelected(true);
+        } catch {
+          setQuery("📍 Current GPS Location");
+          onSelect("Exact GPS Location", latitude, longitude);
+        }
+        setLocating(false);
+      },
+      () => {
+        alert("Please allow location access for exact delivery.");
+        setLocating(false);
+      }
+    );
   };
 
   return (
     <div className="relative space-y-2">
-      <label className="text-[10px] font-black text-[#8b5a2b] uppercase ml-1">Delivery Address</label>
+      <div className="flex justify-between items-center ml-1">
+        <label className="text-[10px] font-black text-[#1a120b] uppercase tracking-tighter">Delivery Address</label>
+        <button onClick={handleGPS} className="text-[9px] font-black text-[#CF7486] uppercase flex items-center gap-1 hover:scale-105 transition-transform">
+          {locating ? <Loader2 size={10} className="animate-spin" /> : <Navigation size={10} />}
+          Exact GPS
+        </button>
+      </div>
       <div className="relative">
-        <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isSelected ? 'text-[#90be6d]' : 'text-[#CF7486]'}`} size={16} />
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a321a]" size={16} />
         <input
           type="text"
-          placeholder="Search area in Bangladesh..."
+          placeholder="Search (e.g. Jahangirnagar)..."
           value={query}
-          onChange={(e) => handleInputChange(e.target.value)}
-          className={`w-full pl-10 pr-10 py-3 bg-[#fdfcf0] border-2 border-[#8b5a2b] rounded-xl text-xs font-bold focus:outline-none transition-all ${isSelected ? 'ring-2 ring-[#90be6d]/20 border-[#90be6d]' : ''}`}
+          onChange={(e) => { 
+            setQuery(e.target.value); 
+            setIsSelected(false);
+            onSelect(e.target.value, 0, 0); 
+          }}
+          className="w-full pl-10 pr-10 py-3 bg-[#fdfcf0] border-2 border-[#8b5a2b] rounded-xl text-xs font-bold focus:outline-none text-[#1a120b] placeholder:text-[#1a120b]/50"
         />
-        {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[#8b5a2b]/40" size={14} />}
       </div>
-      <AnimatePresence>
-        {showDropdown && !isSelected && query.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute z-[10001] w-full bg-white border-2 border-[#8b5a2b] rounded-2xl shadow-[8px_8px_0px_rgba(139,90,43,0.1)] mt-1 overflow-y-auto max-h-[200px]">
-            {suggestions.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  onSelect(s.display_name, parseFloat(s.lat), parseFloat(s.lon));
-                  setQuery(s.display_name);
-                  setIsSelected(true);
-                  setShowDropdown(false);
-                }}
-                className="w-full text-left px-4 py-3 text-[10px] font-bold text-[#8b5a2b] hover:bg-[#f0f9eb] border-b border-[#8b5a2b]/10 last:border-0 flex items-start gap-2"
-              >
-                <Search size={12} className="shrink-0 text-[#90be6d] mt-0.5" />
-                <span className="leading-tight">{s.display_name}</span>
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showDropdown && (
+        <div className="absolute z-[10001] w-full bg-white border-2 border-[#8b5a2b] rounded-2xl shadow-xl mt-1 max-h-40 overflow-y-auto">
+          {suggestions.map((s, i) => (
+            <button key={i} onClick={() => { onSelect(s.display_name, parseFloat(s.lat), parseFloat(s.lon)); setQuery(s.display_name); setIsSelected(true); setShowDropdown(false); }} className="w-full text-left px-4 py-2 text-[10px] font-bold border-b border-gray-100 last:border-0 hover:bg-[#FFE6ED] text-[#1a120b]">
+              {s.display_name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// --- MAIN COMPONENT ---
-export default function Cart({ cart, cartOpen, setCartOpen, setCart, total, isOrdered, setIsOrdered }: CartProps) {
+export default function Cart({ cart, cartOpen, setCartOpen, setCart, total }: CartProps) {
+  const router = useRouter();
   const [address, setAddress] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [coords, setCoords] = useState<[number, number] | null>(null);
-  const [deliveryProgress, setDeliveryProgress] = useState(0);
-  const [cancelTimer, setCancelTimer] = useState(120); 
-  const [canCancel, setCanCancel] = useState(true);
-  const [orderStartTime, setOrderStartTime] = useState<number | null>(null);
 
-  const BD_BOUNDS = { viewbox: "88.01,20.34,92.67,26.63" };
+  const bdPhoneRegex = /^01[3-9]\d{8}$/;
+  const isFormValid = address.trim().length > 5 && customerName.trim().length > 2 && bdPhoneRegex.test(phoneNumber);
 
   useEffect(() => {
-    const savedOrder = localStorage.getItem("honey_haze_order");
-    if (savedOrder) {
-      const data = JSON.parse(savedOrder);
-      setAddress(data.address);
-      setCoords(data.coords);
-      setIsOrdered(data.isOrdered);
-      setOrderStartTime(data.startTime);
-      if (data.startTime && data.isOrdered) {
-        const elapsedSeconds = (Date.now() - data.startTime) / 1000;
-        const calculatedProgress = Math.min(elapsedSeconds * 2.0, 100);
-        setDeliveryProgress(calculatedProgress);
-      }
+    const handleOpen = () => setCartOpen(true);
+    window.addEventListener("open-cart", handleOpen);
+    return () => window.removeEventListener("open-cart", handleOpen);
+  }, [setCartOpen]);
+
+  const syncAndSave = (newCart: CartItem[]) => {
+    setCart(newCart);
+    localStorage.setItem("honey_haze_cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const updateQty = (id: string, val: number) => {
+    const newCart = cart.map((item) => (item._id === id ? { ...item, qty: val } : item));
+    syncAndSave(newCart);
+  };
+
+  const removeItem = (id: string) => {
+    const newCart = cart.filter(item => item._id !== id);
+    syncAndSave(newCart);
+  };
+
+  const clearCart = () => {
+    if (confirm("Are you sure you want to clear your bag?")) {
+      syncAndSave([]);
     }
-  }, [setIsOrdered]);
-
-  useEffect(() => {
-    if (isOrdered) {
-      const orderData = { address, coords, isOrdered, startTime: orderStartTime || Date.now() };
-      localStorage.setItem("honey_haze_order", JSON.stringify(orderData));
-      if (!orderStartTime) setOrderStartTime(orderData.startTime);
-    }
-  }, [isOrdered, address, coords, orderStartTime]);
-
-  const handleProgressUpdate = useCallback((p: number) => {
-    setDeliveryProgress(p);
-  }, []);
-
-  useEffect(() => {
-    let interval: any;
-    if (isOrdered && cancelTimer > 0) {
-      interval = setInterval(() => setCancelTimer((prev) => prev - 1), 1000);
-    } else if (cancelTimer === 0) {
-      setCanCancel(false);
-    }
-    return () => clearInterval(interval);
-  }, [isOrdered, cancelTimer]);
-
-  const updateQty = (id: string, delta: number) => {
-    if (isOrdered) return;
-    setCart((prev) => prev.map((item) => {
-      if (item._id === id) {
-        const newQty = item.qty + delta;
-        return newQty > 0 ? { ...item, qty: newQty } : null;
-      }
-      return item;
-    }).filter((item): item is CartItem => item !== null));
   };
 
   const handleCheckout = () => {
-    if (!coords || !address) return;
-    setOrderStartTime(Date.now());
-    setIsOrdered(true);
-  };
+    if (!isFormValid) return;
 
-  const handleResetEverything = () => {
-    setIsOrdered(false);
-    setCart([]);
-    setAddress("");
-    setCoords(null);
-    setCancelTimer(120);
-    setDeliveryProgress(0);
-    setOrderStartTime(null);
-    localStorage.removeItem("honey_haze_order");
-    setCartOpen(false);
+    const finalCoords = coords && coords[0] !== 0 ? coords : [23.8103, 90.4125]; 
+    const newOrder = {
+      id: `HH-${Math.floor(Date.now() / 100000)}`,
+      items: [...cart],
+      total: total,
+      customerName: customerName,
+      phoneNumber: phoneNumber,
+      address: address.trim() || "Specified Location",
+      coords: finalCoords,
+      startTime: Date.now(),
+    };
+    
+    const existing = JSON.parse(localStorage.getItem("honey_haze_orders") || "[]");
+    localStorage.setItem("honey_haze_orders", JSON.stringify([newOrder, ...existing]));
+    
+    syncAndSave([]); 
+    setCartOpen(false); 
+    router.push("/order-history"); 
   };
-
-  const deliveryTime = useMemo(() => {
-    const timeToUse = orderStartTime || Date.now();
-    const arrivalTime = new Date(timeToUse);
-    arrivalTime.setMinutes(arrivalTime.getMinutes() + 35);
-    return arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }, [isOrdered, orderStartTime]);
 
   return (
-    <AnimatePresence>
-      {cartOpen && (
-        <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setCartOpen(false)} className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9998]" />
+    <>
+      <button onClick={() => setCartOpen(true)} className="fixed bottom-8 right-8 z-[9990] bg-[#CF7486] text-white p-5 rounded-full shadow-[0_8px_0_#a65d6c] hover:scale-110 active:translate-y-1 active:shadow-none transition-all">
+        <ShoppingBag size={28} />
+        {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#8b5a2b] text-white text-[10px] font-black h-6 w-6 flex items-center justify-center rounded-full border-2 border-white">{cart.reduce((a, b) => a + b.qty, 0)}</span>}
+      </button>
 
-          <motion.div
-            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-full w-full max-w-[400px] bg-[#fffdf5] shadow-[-10px_0_30px_rgba(0,0,0,0.05)] z-[9999] flex flex-col border-l-[3px] border-[#8b5a2b]"
-          >
-            {/* HEADER */}
-            <div className={`p-6 border-b-[3px] border-[#8b5a2b] flex justify-between items-center transition-colors duration-500 ${isOrdered ? 'bg-[#90be6d]' : 'bg-[#FFE6ED]'}`}>
-              <div className="flex items-center gap-2 text-white">
-                {isOrdered ? <CheckCircle size={24} /> : <ShoppingBag className="text-[#CF7486]" size={24} />}
-                <h2 className="text-xl font-black uppercase tracking-tight">
-                    {isOrdered ? (deliveryProgress >= 100 ? "Delivered!" : "Tracking Order") : "Your Bag"}
-                </h2>
-              </div>
-              <button onClick={() => setCartOpen(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors">
-                <X size={24} className="text-white" />
-              </button>
-            </div>
-
-            <div className="flex-grow overflow-y-auto p-6 space-y-6">
-              <AnimatePresence mode="wait">
-                {!isOrdered ? (
-                  <motion.div key="cart-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-                    {cart.map((item) => (
-                      <motion.div layout key={item._id} className="group relative flex gap-4 bg-white p-3 rounded-2xl border-2 border-[#8b5a2b] shadow-[4px_4px_0_#8b5a2b]">
-                        <div className="relative h-16 w-16 flex-shrink-0">
-                          <Image src={item.image} alt={item.name} fill className="object-cover rounded-xl" unoptimized />
-                        </div>
-                        <div className="flex flex-col justify-between py-1 flex-grow">
-                          <h3 className="font-black text-[#8b5a2b] text-xs uppercase">{item.name}</h3>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center bg-[#fdfcf0] border border-[#8b5a2b]/20 rounded-lg">
-                              <button onClick={() => updateQty(item._id, -1)} className="p-1 text-[#8b5a2b]">{item.qty === 1 ? <Trash2 size={12} /> : <Minus size={12} />}</button>
-                              <span className="w-6 text-center font-bold text-xs">{item.qty}</span>
-                              <button onClick={() => updateQty(item._id, 1)} className="p-1 text-[#8b5a2b]"><Plus size={12} /></button>
-                            </div>
-                            <span className="font-black text-[#8b5a2b] text-sm">৳ {(item.price * item.qty).toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                ) : (
-                  <motion.div key="tracking-view" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pb-10">
-                    {coords && (
-                      <OrderTracker 
-                        address={address} 
-                        destination={coords} 
-                        onProgressUpdate={handleProgressUpdate} 
-                        initialProgress={deliveryProgress} 
-                      />
-                    )}
-
-                    <MemoReceipt items={cart} total={total} orderId={`HH-${Math.floor((orderStartTime || Date.now()) / 100000)}`} />
-
-                    <RiderChat progress={deliveryProgress} total={total} />
-
-                    <div className="bg-white border-2 border-[#8b5a2b] rounded-2xl p-4 shadow-[4px_4px_0px_#8b5a2b] space-y-3">
-                        <div className="flex items-start gap-3 text-[11px] font-black text-[#8b5a2b]">
-                            <MapPin size={16} className="text-[#CF7486] shrink-0 mt-0.5" />
-                            <p className="leading-relaxed">{address}</p>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] font-black text-[#8b5a2b]">
-                            <Clock size={16} className="text-[#90be6d] shrink-0" />
-                            <p>{deliveryProgress >= 100 ? "Arrived!" : `ETA: ${deliveryTime}`}</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        {canCancel && deliveryProgress < 90 && (
-                            <button onClick={() => handleResetEverything()} className="w-full bg-white border-2 border-[#CF7486] text-[#CF7486] py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-[0_4px_0_#CF7486] active:translate-y-1 transition-all">
-                                Cancel Order ({Math.floor(cancelTimer / 60)}:{(cancelTimer % 60).toString().padStart(2, '0')})
-                            </button>
-                        )}
-
-                        {deliveryProgress >= 100 ? (
-                          <div className="space-y-4">
-                            <TipJar />
-                            <RiderReview 
-                              riderName="Sagor" 
-                              onSave={(data) => console.log("Evil Rating Saved:", data)} 
-                            />
-                            <button 
-                              onClick={handleResetEverything} 
-                              className="w-full bg-[#90be6d] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_4px_0_#5a7d32] active:translate-y-1 transition-all flex items-center justify-center gap-2"
-                            >
-                              <RefreshCcw size={16} />
-                              Go back to menu
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => setCartOpen(false)} 
-                            className="w-full bg-[#8b5a2b] text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-[0_4px_0_#5d3d1e] active:translate-y-1 transition-all"
-                          >
-                            Close Tracker
-                          </button>
-                        )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* CHECKOUT FOOTER */}
-            {cart.length > 0 && !isOrdered && (
-              <div className="p-6 bg-white border-t-[3px] border-[#8b5a2b] space-y-4">
-                <LocationSearch viewbox={BD_BOUNDS.viewbox} onSelect={(addr, lat, lon) => { setAddress(addr); setCoords([lat, lon]); }} />
-                <div className="flex justify-between items-end pt-2">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-[#8b5a2b]/40 uppercase tracking-tighter">Total Bill (COD)</span>
-                        <span className="text-2xl font-black text-[#D4A24C]">৳ {(total + 50).toLocaleString()}</span>
-                    </div>
+      <AnimatePresence>
+        {cartOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setCartOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]" />
+            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed top-0 right-0 h-full w-full max-w-[400px] bg-[#fffdf5] z-[9999] flex flex-col border-l-[3px] border-[#8b5a2b]">
+              
+              <div className="p-6 border-b-[3px] border-[#8b5a2b] flex justify-between items-center bg-[#FFE6ED]">
+                <div className="flex items-center gap-2 text-[#1a120b]">
+                  <ShoppingBag size={24} />
+                  <h2 className="text-xl font-black uppercase italic tracking-tight">Your Bag</h2>
                 </div>
-                <button 
-                    onClick={handleCheckout}
-                    disabled={!coords}
-                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${coords ? "bg-[#90be6d] text-white shadow-[0_4px_0_#5a7d32]" : "bg-gray-200 text-gray-400 opacity-50"}`}
-                >
-                  <CreditCard size={20} />
-                  Confirm Order
-                </button>
+                <div className="flex items-center gap-4">
+                  {cart.length > 0 && (
+                    <button onClick={clearCart} className="text-[#CF7486] hover:text-[#a65d6c] transition-colors" title="Clear All">
+                      <Trash2 size={20} strokeWidth={2.5} />
+                    </button>
+                  )}
+                  <button onClick={() => setCartOpen(false)} className="text-[#1a120b] hover:rotate-90 transition-all">
+                      <X size={26} strokeWidth={3} />
+                  </button>
+                </div>
               </div>
-            )}
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+
+              <div className="flex-grow overflow-y-auto p-6 space-y-6">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                     <ShoppingBag size={48} className="text-[#8b5a2b]/20" />
+                     <div className="text-[#1a120b]/40 font-black uppercase text-xs">Bag is empty</div>
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      key={item._id} 
+                      className="relative flex gap-4 bg-white p-3 rounded-2xl border-2 border-[#8b5a2b] shadow-[4px_4px_0_#8b5a2b]"
+                    >
+                      <button 
+                        onClick={() => removeItem(item._id)}
+                        className="absolute -top-2 -left-2 bg-[#CF7486] text-white p-1 rounded-full border-2 border-[#8b5a2b] shadow-[2px_2px_0_#8b5a2b] hover:scale-110 active:translate-y-0.5 active:shadow-none transition-all z-20"
+                        title="Remove Item"
+                      >
+                        <X size={12} strokeWidth={4} />
+                      </button>
+
+                      <div className="relative h-16 w-16 shrink-0">
+                        <Image src={item.image} alt={item.name} fill className="object-cover rounded-xl border border-[#8b5a2b]/10" unoptimized />
+                      </div>
+                      
+                      <div className="flex flex-col justify-between flex-grow">
+                        <h3 className="font-black text-[#1a120b] text-[11px] uppercase leading-tight pr-2">{item.name}</h3>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center bg-[#fdfcf0] border border-[#8b5a2b]/20 rounded-lg overflow-hidden">
+                            <button 
+                              onClick={() => item.qty > 1 && updateQty(item._id, item.qty - 1)} 
+                              disabled={item.qty <= 1}
+                              className={`p-1.5 text-[#1a120b] ${item.qty <= 1 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-[#8b5a2b]/10'}`}
+                            >
+                              <Minus size={12} />
+                            </button>
+                            
+                            <input 
+                              type="number"
+                              value={item.qty === 0 ? "" : item.qty}
+                              onFocus={() => { if (item.qty === 1) updateQty(item._id, 0); }}
+                              onBlur={() => { if (item.qty === 0 || isNaN(item.qty)) updateQty(item._id, 1); }}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                updateQty(item._id, isNaN(val) ? 0 : val);
+                              }}
+                              className="w-10 text-center font-black text-xs text-[#1a120b] bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+
+                            <button onClick={() => updateQty(item._id, item.qty + 1)} className="p-1.5 text-[#1a120b] hover:bg-[#8b5a2b]/10">
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                          <p className="font-bold text-[#8b5a2b] text-sm">৳ {(item.price * item.qty).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+
+              {cart.length > 0 && (
+                <div className="p-6 bg-white border-t-[3px] border-[#8b5a2b] space-y-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-[#1a120b] uppercase ml-1">Recipient Name</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a321a]" size={16} />
+                      <input
+                        type="text"
+                        placeholder="Your Name"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-[#fdfcf0] border-2 border-[#8b5a2b] rounded-xl text-xs font-bold focus:outline-none text-[#1a120b]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-[#1a120b] uppercase ml-1">Phone Number</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a321a]" size={16} />
+                      <input
+                        type="tel"
+                        placeholder="017XXXXXXXX"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className={`w-full pl-10 pr-4 py-3 bg-[#fdfcf0] border-2 rounded-xl text-xs font-bold focus:outline-none text-[#1a120b] ${phoneNumber && !bdPhoneRegex.test(phoneNumber) ? 'border-red-400' : 'border-[#8b5a2b]'}`}
+                      />
+                    </div>
+                  </div>
+
+                  <LocationSearch onSelect={(addr, lat, lon) => { setAddress(addr); setCoords([lat, lon]); }} />
+
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-[#1a120b]/60 uppercase tracking-widest">Total + ৳50 Delivery</span>
+                      <span className="text-2xl font-black text-[#8b5a2b]">৳ {(total + 50).toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleCheckout} 
+                    disabled={!isFormValid} 
+                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest transition-all ${isFormValid ? "bg-[#90be6d] text-white shadow-[0_4px_0_#5a7d32] active:translate-y-1 active:shadow-none" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                  >
+                    Confirm Order
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

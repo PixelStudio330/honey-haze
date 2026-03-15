@@ -1,51 +1,44 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// Trim the key to prevent hidden newline/space errors from .env
+// Ensure you've updated your .env.local with the NEW key!
 const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-const ai = new GoogleGenAI({ apiKey });
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function POST(req: Request) {
   try {
     const { message, riderName, progress } = await req.json();
 
-    // Verification: Ensure we don't send an empty prompt
     if (!message) {
-      return NextResponse.json({ text: "Sir, apnar message ta bujhte parini. Bolun?" });
+      return NextResponse.json({ text: "Sir, message ta asheni. Abar bolben?" });
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{
-        role: "user",
-        parts: [{
-          text: `You are ${riderName}, a friendly delivery rider for "Honey Haze" in Bangladesh.
-          Never use any violent word, always be respectful towards the customer and use Banglish (Bengali-English mix) in an energetic tone.
-          If the customer asks about the amount they have to pay just say "Order on the way, sir! Just keep the cash ready. Currently driving so it's hard to take out the receipt, I am so sorry."
-          Current Status: ${progress}% done. 
-          Tone: Energetic Banglish (sir, ma'am). Max 2 sentences.
-          Customer says: "${message}"`
-        }]
-      }]
-    });
+    // Try 'gemini-1.5-flash' first. 
+    // If it still 404s, change this string to 'gemini-2.0-flash'
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Ensure we handle the text extraction based on your package's specific return type
-    const responseText = response?.text || "Sir, ektu traffic e achi, ashtesi! 🛵";
+    const prompt = `You are ${riderName}, a friendly delivery rider for "Honey Haze" in Bangladesh.
+      Be respectful and use energetic Banglish. 
+      If asked about payment: "Order on the way, sir! Cash ready raikhen. Currently driving so receipt ber kora kothin, sorry sir."
+      Current Status: ${progress}% done. 
+      Tone: Energetic Banglish. Max 2 sentences.
+      Customer says: "${message}"`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const responseText = response.text() || "Sir, ektu traffic e achi, ashtesi! 🛵";
 
     return NextResponse.json({ text: responseText });
 
   } catch (error: any) {
-    console.error("DEBUG:", error);
+    console.error("DEBUG ERROR:", error);
     
-    // Fallback: This prevents the "Lost Connection" UI error by returning a 200 with a manual message
-    // If the 404 persists, Sagor will use these lines instead of crashing.
     const fallbacks = [
       "Sir, rastay khub jam! I am coming as fast as I can! 🛵",
       "Almost there sir! Just turning the corner. 🍯",
-      "Network ektu problem kortese sir, but don't worry, treats are safe!"
+      "Network ektu problem kortese sir, treats are safe!"
     ];
     const randomFallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-
     return NextResponse.json({ text: randomFallback });
   }
 }

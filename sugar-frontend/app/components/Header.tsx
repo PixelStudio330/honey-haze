@@ -31,15 +31,15 @@ export default function Header() {
     { name: "Reviews", href: "/reviews" },
     { name: "Offers", href: "/offer" },
     { name: "Contact", href: "/contact" },
+    { name: "Order History", href: "/order-history" },
   ];
 
   if (!mounted) return null;
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-gradient-to-r from-[#F9D7D7]/70 via-[#FFF6E0]/70 to-[#C8E3D4]/70 backdrop-blur-lg border-b border-[#F4C2C2]/40 shadow-[0_3px_20px_rgba(255,192,203,0.3)]">
+    /* REMOVED shadow-sm and ADJUSTED bg-white opacity to prevent the dark blur bleed */
+    <header className="fixed top-0 left-0 w-full z-[100] bg-white/80 backdrop-blur-md border-b-[3px] border-[#F4C2C2]/50 bg-clip-padding">
       <div className="flex justify-between items-center px-6 md:px-10 py-5">
-
-        {/* 🍭 Logo + Title */}
         <Link
           href="/"
           className="flex items-center gap-3 group"
@@ -53,21 +53,19 @@ export default function Header() {
           <motion.img
             src="images/logo.jpg"
             alt="Sugar Land Logo"
-            className="w-10 h-10 object-cover rounded-full border-2 border-[#F6D6E0] shadow-md"
+            className="w-10 h-10 object-cover rounded-full border-2 border-[#F6D6E0]"
             whileHover={{ scale: 1.1, rotate: 8 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
           />
           <motion.span
-  className="text-2xl font-bold text-[#a14b45e8] transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(130,168,153,0.8)]"
-  animate={{ y: [0, -3, 0] }}
-  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
->
-  Honey Haze ૮₍ ´˶• ˕ •˶` ₎ა
-</motion.span>
-
+            className="text-2xl font-black text-[#8A5559]"
+            animate={{ y: [0, -2, 0] }}
+            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+          >
+            Honey Haze ૮₍ ´˶• ˕ •˶` ₎ა
+          </motion.span>
         </Link>
 
-        {/* 🌸 Desktop Nav */}
         <nav className="hidden md:flex space-x-8">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
@@ -75,63 +73,42 @@ export default function Header() {
               <div key={link.name} className="relative group">
                 <Link
                   href={link.href}
-                  className={`font-semibold text-lg transition-all duration-300 ${
-                    isActive
-                      ? "text-[#a14b45e8]"
-                      : "text-[#a14b45e8]/80 hover:text-[#57352c]"
+                  className={`font-black text-sm uppercase tracking-wider transition-all duration-300 ${
+                    isActive ? "text-[#8A5559]" : "text-[#8A5559]/60 hover:text-[#8A5559]"
                   }`}
                 >
                   {link.name}
                 </Link>
-                <span
-                  className={`absolute left-0 bottom-[-4px] h-[2px] rounded-full transition-all duration-500 ${
-                    isActive
-                      ? "bg-[#a14b45e8] w-full"
-                      : "bg-[#a14b45e8]/50 w-0 group-hover:w-full"
-                  }`}
-                ></span>
+                <span className={`absolute left-0 bottom-[-4px] h-[3px] rounded-full transition-all duration-500 ${isActive ? "bg-[#D4A24C] w-full" : "bg-[#D4A24C]/40 w-0 group-hover:w-full"}`}></span>
               </div>
             );
           })}
         </nav>
 
-        {/* 🍬 Mobile Menu Toggle */}
-        <button
-          className="md:hidden text-[#82A899]"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
+        <button className="md:hidden text-[#8A5559]" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X size={26} /> : <Menu size={26} />}
         </button>
       </div>
 
-      {/* 💖 Floating Mobile Menu */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
             ref={menuRef}
-            initial={{ opacity: 0, y: -15 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.3 }}
-            className="md:hidden flex flex-col items-center space-y-4 pb-6 pt-3 bg-gradient-to-b from-[#FFF6E0]/90 to-[#F9D7D7]/90 border-t border-[#F4C2C2]/40"
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden flex flex-col items-center space-y-4 pb-8 pt-4 bg-white/95 border-t border-[#F4C2C2]/40 shadow-lg"
           >
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`font-medium text-lg transition-all duration-300 ${
-                    isActive
-                      ? "text-[#82A899] underline underline-offset-4 decoration-[#82A899]"
-                      : "text-[#82A899]/90 hover:text-[#82A899]"
-                  }`}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="font-black text-lg text-[#8A5559] uppercase"
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.name}
+              </Link>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

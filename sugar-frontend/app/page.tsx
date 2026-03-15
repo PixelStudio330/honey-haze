@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import Cart, { CartItem } from "./components/Cart";
+import { Minus, Plus, ReceiptText, Trash2 } from "lucide-react";
 
 // 🌸 BACKUP DATA
 const backupFoods: FoodItem[] = [
@@ -26,208 +26,247 @@ export default function Home() {
   const [filter, setFilter] = useState("all");
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   
-  // NEW: State to track if an order is currently active
-  const [isOrdered, setIsOrdered] = useState(false);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
 
   useEffect(() => {
     setHasMounted(true); 
+    syncCart();
+
     async function loadFoods() {
       try {
         const res = await fetch("/api/foods");
-        const contentType = res.headers.get("content-type");
-        if (!res.ok || !contentType || !contentType.includes("application/json")) {
-          throw new Error("API returned non-JSON response");
-        }
         const data = await res.json();
         setFoods(Array.isArray(data) && data.length > 0 ? data : backupFoods);
       } catch (err) {
-        console.warn("Neon DB unreachable. Using local backup menu. 🌸", err);
         setFoods(backupFoods);
       } finally {
         setLoading(false);
       }
     }
     loadFoods();
+
+    window.addEventListener("storage", syncCart);
+    return () => window.removeEventListener("storage", syncCart);
   }, []);
 
-  const removeFromCart = (id: string) => {
-    if (isOrdered) return; // Prevent removal during delivery
-    setCart(prev => prev.filter(item => item._id !== id));
+  const syncCart = () => {
+    const saved = localStorage.getItem("honey_haze_cart");
+    setCartItems(saved ? JSON.parse(saved) : []);
+  };
+
+  const updateCart = (newCart: any[]) => {
+    setCartItems(newCart);
+    localStorage.setItem("honey_haze_cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event("storage"));
   };
 
   const addToCart = (item: FoodItem) => {
-    // Prevent adding if an order is already placed
-    if (isOrdered) {
-      setNotification("Finish your current order first! 🛵");
-      setTimeout(() => setNotification(null), 3000);
-      return;
-    }
-
+    let currentCart = [...cartItems];
     const foodIdStr = String(item.id);
-    const itemPrice = item.price || 150;
-
-    setCart(prev => {
-      const existingItem = prev.find(f => f.foodId === foodIdStr);
-      if (existingItem) {
-        return prev.map(f => f.foodId === foodIdStr ? { ...f, qty: f.qty + 1 } : f);
-      }
-      return [...prev, {
+    const existingIndex = currentCart.findIndex((f: any) => f.foodId === foodIdStr);
+    
+    if (existingIndex > -1) {
+      currentCart[existingIndex].qty += 1;
+    } else {
+      currentCart.push({
         _id: crypto.randomUUID(),
         foodId: foodIdStr,
         name: item.name,
-        price: itemPrice,
+        price: item.price || 150,
         image: item.image,
         qty: 1,
-      }];
-    });
+      });
+    }
 
-    setNotification(`${item.name} added to bag!🍓`);
-    setTimeout(() => setNotification(null), 4000);
+    updateCart(currentCart);
+
+    if (!hasOpenedOnce) {
+      window.dispatchEvent(new CustomEvent("open-cart"));
+      setHasOpenedOnce(true);
+    }
+
+    setNotification(`${item.name} added!🍓`);
+    setTimeout(() => setNotification(null), 2000);
+  };
+
+  const changeQty = (foodId: string, delta: number) => {
+    const currentCart = [...cartItems];
+    const idx = currentCart.findIndex(f => f.foodId === foodId);
+    if (idx === -1) return;
+
+    currentCart[idx].qty += delta;
+    if (currentCart[idx].qty <= 0) {
+      currentCart.splice(idx, 1);
+    }
+    updateCart(currentCart);
+  };
+
+  const removeFromCart = (foodId: string) => {
+    const currentCart = cartItems.filter(f => f.foodId !== foodId);
+    updateCart(currentCart);
+  };
+
+  const handleManualQty = (foodId: string, val: string) => {
+    const currentCart = [...cartItems];
+    const idx = currentCart.findIndex(f => f.foodId === foodId);
+    if (idx === -1) return;
+
+    if (val === "") {
+        currentCart[idx].qty = ""; 
+    } else {
+        const num = parseInt(val);
+        currentCart[idx].qty = isNaN(num) ? 1 : num;
+    }
+    updateCart(currentCart);
+  };
+
+  const handleBlur = (foodId: string, currentVal: any) => {
+    if (currentVal === "" || currentVal <= 0) {
+        const currentCart = [...cartItems];
+        const idx = currentCart.findIndex(f => f.foodId === foodId);
+        if (idx !== -1) {
+            currentCart[idx].qty = 1; 
+            updateCart(currentCart);
+        }
+    }
   };
 
   const filteredFoods = filter === "all" ? foods : foods.filter(f => f.type === filter);
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
-
-  const bgIcons = [
-    { icon: "🍰", top: "8%", left: "12%" },
-    { icon: "🍞", top: "10%", left: "80%" },
-    { icon: "🍓", top: "50%", left: "15%" },
-    { icon: "🍩", top: "45%", left: "92%" },
-    { icon: "🥐", top: "85%", left: "18%" },
-    { icon: "🍪", top: "88%", left: "85%" },
-  ];
+  const total = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
   if (!hasMounted) return <div className="min-h-screen bg-[#F0EBD1]" />;
 
   return (
-    <main className="relative min-h-screen bg-[#F0EBD1] flex flex-col items-center justify-start p-6 text-center overflow-x-hidden">
-      {/* Notifications */}
+    /* REMOVED pt-24 to let hero touch the top */
+    <main className="relative min-h-screen bg-[#F0EBD1] flex flex-col items-center justify-start text-center overflow-x-hidden">
+      
       <AnimatePresence>
-        {notification && (
+        {cartItems.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 20 }}
-            exit={{ opacity: 0, y: -50 }}
-            className={`fixed top-4 z-[100] ${isOrdered ? 'bg-orange-500' : 'bg-[#82A899]'} text-white px-6 py-3 rounded-full font-bold shadow-lg border-2 border-white flex items-center gap-2`}
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 100, opacity: 0 }}
+            onClick={() => window.dispatchEvent(new CustomEvent("open-cart"))}
+            className="fixed bottom-24 right-8 z-[50] w-64 bg-white border-[3px] border-[#8A5559] rounded-2xl shadow-[6px_6px_0_#8A5559] cursor-pointer overflow-hidden flex flex-col max-h-48"
           >
-            <span>{isOrdered ? "⚠️" : "✅"}</span> {notification}
+            <div className="bg-[#FFE6ED] p-2 border-b-2 border-[#8A5559] flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[#8A5559]">
+                <ReceiptText size={14} /> Bag Summary
+              </div>
+              <span className="text-[10px] font-black text-[#D4A24C]">৳ {total.toLocaleString()}</span>
+            </div>
+            <div className="overflow-y-auto p-2 space-y-2">
+              {cartItems.map((item) => (
+                <div key={item._id} className="flex items-center justify-between gap-2 border-b border-gray-100 pb-1">
+                  <div className="flex items-center gap-2 truncate">
+                    <img src={item.image} className="w-6 h-6 rounded object-cover" />
+                    <span className="text-[9px] font-bold text-[#1a120b] truncate">{item.name}</span>
+                  </div>
+                  <span className="text-[9px] font-black text-[#8A5559] shrink-0">x{item.qty}</span>
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Hero Section */}
-      <div className="relative w-screen h-[400px] md:h-[500px] flex flex-col items-center justify-center z-10">
-        <Image src="/images/new-hero.jpg" alt="Hero" fill className="object-cover" priority unoptimized />
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8">
-          <motion.h1
-            className="text-5xl sm:text-7xl font-extrabold"
-            style={{ color: '#FFD700', textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
-            animate={{ y: [-3, 3, -3] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      <AnimatePresence>
+        {notification && (
+          <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 100 }} exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 z-[110] bg-[#82A899] text-white px-6 py-3 rounded-full font-bold shadow-lg border-2 border-white flex items-center gap-2"
           >
+            ✅ {notification}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hero Section - UPDATED: Cleaned container, removed rounded corners and max-width for top-flush fit */}
+      <div className="relative w-full h-[450px] md:h-[600px] flex flex-col items-center justify-center z-0 overflow-hidden">
+        <Image 
+          src="/images/new-hero.jpg" 
+          alt="Hero" 
+          fill 
+          className="object-cover" 
+          priority 
+          unoptimized 
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 bg-transparent">
+          <motion.h1 className="text-5xl sm:text-7xl font-extrabold" style={{ color: '#FFD700', textShadow: '4px 4px 20px rgba(0,0,0,0.6)' }}
+            animate={{ y: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
             🥞 Honey Haze 🍯
           </motion.h1>
-          <p className="mt-4 text-lg sm:text-2xl text-white font-bold drop-shadow-md italic">
-            delicious food, fast service, zero regrets 🍭
-          </p>
+          <p className="mt-4 text-lg sm:text-2xl text-white font-bold drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] italic">delicious food, fast service, zero regrets 🍭</p>
         </div>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="z-10 flex gap-4 mt-8 mb-6">
-        {["all", "sweet", "spicy"].map((type) => (
-          <button
-            key={`filter-${type}`}
-            onClick={() => setFilter(type)}
-            className={`px-6 py-2 rounded-full font-bold transition-all shadow-md active:scale-95 ${
-              filter === type ? "bg-[#D4A24C] text-white" : "bg-white text-[#8A5559] border-2 border-[#D4A24C]"
-            }`}
-          >
-            {type === "all" ? "🍞 All" : type === "sweet" ? "🍰 Sweet" : "🌶 Spicy"}
-          </button>
-        ))}
-      </div>
-
-      {/* Food Grid */}
-      <section className="z-10 w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-4 pb-20">
-        {loading ? (
-          <div className="col-span-full py-20 text-2xl font-bold text-[#8A5559] animate-pulse">Baking the magic... 🌸</div>
-        ) : (
-          filteredFoods.map((food) => (
-            <motion.div
-              key={`food-card-${food.id}`}
-              layout
-              className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border-4 border-[#8A5559] flex flex-col"
-              whileHover={!isOrdered ? { y: -5 } : {}}
+      {/* Content wrapper for padding */}
+      <div className="w-full flex flex-col items-center px-6">
+        <div className="z-10 flex gap-4 mt-8 mb-6">
+            {["all", "sweet", "spicy"].map((type) => (
+            <button key={type} onClick={() => setFilter(type)}
+                className={`px-6 py-2 rounded-full font-bold transition-all shadow-md active:scale-95 ${
+                filter === type ? "bg-[#D4A24C] text-white" : "bg-white text-[#8A5559] border-2 border-[#D4A24C]"
+                }`}
             >
-              <div className="relative w-full h-48">
-                <Image src={food.image || "/images/logo.jpg"} alt={food.name} fill className="object-cover" unoptimized />
-                {isOrdered && (
-                  <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">
-                    <span className="bg-[#8A5559] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Locked</span>
-                  </div>
-                )}
-              </div>
-              <div className="p-5 flex flex-col flex-grow text-left">
-                <h3 className="text-lg font-black text-[#C98895] uppercase">{food.name}</h3>
-                <p className="text-xs text-[#82A899] font-bold mt-1 mb-4 line-clamp-2">{food.description}</p>
-                <div className="flex items-center justify-between mt-auto">
-                   <span className="text-lg font-black text-[#D4A24C]">৳ {food.price}</span>
-                   <button
-                    onClick={() => addToCart(food)}
-                    disabled={isOrdered}
-                    className={`font-black py-2 px-4 rounded-full text-xs shadow-md transition-all active:scale-90 ${
-                      isOrdered 
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-                        : "bg-[#D4A24C] hover:bg-[#C98895] text-white"
-                    }`}
-                  >
-                    {isOrdered ? "ON WAY 🛵" : "ADD +"}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </section>
+                {type === "all" ? "🍞 All" : type === "sweet" ? "🍰 Sweet" : "🌶 Spicy"}
+            </button>
+            ))}
+        </div>
 
-      {/* Floating Cart Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setCartOpen(true)}
-        className={`fixed bottom-8 right-8 z-[50] text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black ring-4 ring-white ${
-          isOrdered ? "bg-[#90be6d]" : "bg-[#D4A24C]"
-        }`}
-      >
-        <span className="text-xl">{isOrdered ? "🛵" : "🛒"}</span>
-        <motion.span 
-          key={cartCount}
-          initial={{ scale: 1.5 }}
-          animate={{ scale: 1 }}
-          className={`px-2 py-0.5 rounded-lg text-sm ${isOrdered ? 'bg-white text-[#90be6d]' : 'bg-white text-[#D4A24C]'}`}
-        >
-          {isOrdered ? "TRACK" : cartCount}
-        </motion.span>
-      </motion.button>
-
-      {/* Updated Cart Drawer with Order State */}
-      <Cart
-        cart={cart}
-        cartOpen={cartOpen}
-        setCartOpen={setCartOpen}
-        setCart={setCart}
-        removeFromCart={removeFromCart}
-        total={total}
-        isOrdered={isOrdered}
-        setIsOrdered={setIsOrdered}
-      />
+        <section className="z-10 w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pb-20">
+            {loading ? (
+            <div className="col-span-full py-20 text-2xl font-bold text-[#8A5559] animate-pulse">Baking the magic... 🌸</div>
+            ) : (
+            filteredFoods.map((food) => {
+                const inCart = cartItems.find(f => f.foodId === String(food.id));
+                return (
+                <motion.div key={food.id} layout className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border-4 border-[#8A5559] flex flex-col" whileHover={{ y: -5 }}>
+                    <div className="relative w-full h-48">
+                    <Image src={food.image || "/images/logo.jpg"} alt={food.name} fill className="object-cover" unoptimized />
+                    </div>
+                    <div className="p-5 flex flex-col flex-grow text-left">
+                    <h3 className="text-lg font-black text-[#C98895] uppercase">{food.name}</h3>
+                    <p className="text-xs text-[#82A899] font-bold mt-1 mb-4 line-clamp-2">{food.description}</p>
+                    <div className="flex items-center justify-between mt-auto">
+                        <span className="text-lg font-black text-[#D4A24C]">৳ {food.price}</span>
+                        
+                        {!inCart ? (
+                        <button onClick={() => addToCart(food)} className="bg-[#D4A24C] hover:bg-[#C98895] text-white font-black py-2 px-4 rounded-full text-xs shadow-md transition-all active:scale-90">
+                            ADD +
+                        </button>
+                        ) : (
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center bg-[#fdfcf0] border-2 border-[#8A5559] rounded-xl overflow-hidden">
+                            <button onClick={() => changeQty(inCart.foodId, -1)} className="px-2 py-1 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Minus size={14} strokeWidth={3} /></button>
+                            <input 
+                                type="number" 
+                                value={inCart.qty} 
+                                onFocus={(e) => handleManualQty(inCart.foodId, "")}
+                                onBlur={(e) => handleBlur(inCart.foodId, e.target.value)}
+                                onChange={(e) => handleManualQty(inCart.foodId, e.target.value)}
+                                className="w-8 text-center font-black text-xs text-[#1a120b] bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                            />
+                            <button onClick={() => changeQty(inCart.foodId, 1)} className="px-2 py-1 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Plus size={14} strokeWidth={3} /></button>
+                            </div>
+                            <button 
+                            onClick={() => removeFromCart(inCart.foodId)}
+                            className="p-2 bg-[#FFE6ED] text-[#8A5559] border-2 border-[#8A5559] rounded-xl hover:bg-[#8A5559] hover:text-white transition-all shadow-sm active:scale-90"
+                            >
+                            <Trash2 size={16} />
+                            </button>
+                        </div>
+                        )}
+                    </div>
+                    </div>
+                </motion.div>
+                )
+            })
+            )}
+        </section>
+      </div>
     </main>
   );
 }
