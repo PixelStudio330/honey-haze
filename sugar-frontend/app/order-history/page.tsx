@@ -188,9 +188,11 @@ export default function OrderHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fffdf5] pb-20">
+    <div className="min-h-screen bg-[#fffdf5] flex flex-col">
       <Toaster position="bottom-center" />
-      <header className="sticky top-0 z-[9999] bg-[#FFE6ED] border-b-[3px] border-[#8b5a2b] p-6 shadow-sm">
+      
+      {/* HEADER: Set to z-50 to stay above content but below global mobile navs */}
+      <header className="sticky top-0 z-[50] bg-[#FFE6ED] border-b-[3px] border-[#8b5a2b] p-6 shadow-sm shrink-0">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link href="/" className="p-2 bg-white rounded-full border-2 border-[#8b5a2b] shadow-[2px_2px_0_#8b5a2b]">
@@ -206,7 +208,8 @@ export default function OrderHistory() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-6 space-y-16 [isolation:isolate]">
+      {/* MAIN: Increased bottom padding (pb-32) so orders don't get stuck behind mobile navbars */}
+      <main className="max-w-2xl mx-auto w-full p-6 space-y-16 pb-32">
         {orders.length === 0 ? (
           <div className="text-center py-20 space-y-4">
             <History size={48} className="text-[#8b5a2b]/20 mx-auto" />
@@ -240,10 +243,11 @@ export default function OrderHistory() {
                     </div>
                   </div>
 
+                  {/* Card Container */}
                   <div className="bg-white rounded-[2.5rem] shadow-[12px_12px_0_rgba(139,90,43,0.1)] overflow-hidden border-[3px] border-[#8b5a2b]">
                     {!isAccepted && (
                       <div className="relative bg-[#fdfcf0]">
-                        <div className="absolute bottom-4 right-4 z-[501] flex flex-col gap-2 items-end">
+                        <div className="absolute bottom-4 right-4 z-[30] flex flex-col gap-2 items-end">
                            <button 
                             onClick={() => toggleMap(order.id)} 
                             className="bg-white border-2 border-[#8b5a2b] px-3 py-2 rounded-2xl flex items-center gap-2 shadow-[3px_3px_0_#8b5a2b] active:translate-y-0.5 active:shadow-none transition-all group"
@@ -311,6 +315,7 @@ export default function OrderHistory() {
                       )}
                     </div>
 
+                    {/* Chat Section */}
                     <div className={`p-6 bg-[#fffdf5] border-t-[3px] border-[#8b5a2b] transition-all duration-500 ${isAccepted ? 'opacity-40 pointer-events-none grayscale brightness-95' : 'opacity-100'}`}>
                       <RiderChat 
                         orderId={order.id} 
