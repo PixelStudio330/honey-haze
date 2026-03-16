@@ -4,14 +4,14 @@ import { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, History, CheckCircle2, Bike, 
-  Map as MapIcon, Trash2, X, Package, Check 
+  Map as MapIcon, Trash2, X, Package, Check, MessageSquare
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { toast, Toaster } from "react-hot-toast";
 import RiderChat from "../components/RiderChat";
 import MemoReceipt from "../components/MemoReceipt";
-import RiderReview from "../components/RiderReview";
 import { TipJar } from "../components/TipJar"; 
 
 const OrderTracker = dynamic(() => import("../components/OrderTracker"), { 
@@ -50,22 +50,17 @@ interface Order {
 }
 
 export default function OrderHistory() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [now, setNow] = useState(Date.now());
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const [acceptedOrders, setAcceptedOrders] = useState<Record<string, boolean>>({});
-
-  const defaultAvatars = [
-    "/images/avatars/sakura.jpg",
-    "/images/avatars/cupcake.jpg",
-    "/images/avatars/pancake.jpg",
-    "/images/avatars/coffee.jpg",
-    "/images/avatars/cake.jpg"
-  ];
+  const [toastActive, setToastActive] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const savedOrders = localStorage.getItem("honey_haze_orders");
     const savedAccepted = localStorage.getItem("honey_haze_accepted");
+    const savedToasts = localStorage.getItem("honey_haze_review_notified");
     
     if (savedOrders) {
       const parsed = JSON.parse(savedOrders);
@@ -81,9 +76,58 @@ export default function OrderHistory() {
       setAcceptedOrders(JSON.parse(savedAccepted));
     }
 
+    if (savedToasts) {
+      setToastActive(JSON.parse(savedToasts));
+    }
+
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    orders.forEach(order => {
+      const progress = calculateProgress(order.startTime);
+      if (progress >= 100 && !acceptedOrders[order.id] && !toastActive[order.id]) {
+        showReviewToast(order.id);
+        const newToastState = { ...toastActive, [order.id]: true };
+        setToastActive(newToastState);
+        localStorage.setItem("honey_haze_review_notified", JSON.stringify(newToastState));
+      }
+    });
+  }, [now, orders]);
+
+  const showReviewToast = (orderId: string) => {
+    toast.custom((t) => (
+      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white border-[3px] border-[#8b5a2b] shadow-[8px_8px_0_#8b5a2b] rounded-[2rem] pointer-events-auto flex flex-col p-6`}>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="bg-[#FFE6ED] p-3 rounded-2xl border-2 border-[#8b5a2b]">
+            <MessageSquare className="text-[#8b5a2b]" size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-black text-[#8b5a2b] uppercase tracking-tighter">Order #{orderId.slice(-4)}</p>
+            <h3 className="text-sm font-black text-[#8b5a2b] leading-tight">Give a Review?</h3>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => { 
+              toast.dismiss(t.id);
+              router.push("/reviews"); 
+            }}
+            className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-black uppercase text-[10px] border-2 border-[#8b5a2b] shadow-[3px_3px_0_#8b5a2b] active:translate-y-0.5 active:shadow-none transition-all"
+          >
+            Yes, Let's Go
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-6 bg-[#FFE6ED] text-[#8b5a2b] py-3 rounded-xl font-black uppercase text-[10px] border-2 border-[#8b5a2b] shadow-[3px_3px_0_#8b5a2b] active:translate-y-0.5 active:shadow-none transition-all"
+          >
+            No
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, position: 'bottom-center' });
+  };
 
   const calculateProgress = (startTime: number) => {
     const packingDuration = 20000; 
@@ -101,44 +145,6 @@ export default function OrderHistory() {
     const elapsed = now - startTime;
     if (elapsed < 20000) return { text: "Packing...", color: "text-amber-500", icon: <Package size={14} className="animate-pulse" /> };
     return { text: "Incoming...", color: "text-orange-500", icon: <Bike size={14} className="animate-bounce" /> };
-  };
-
-  const handleSaveReview = (reviewData: any, order: Order, riderId: string) => {
-    const existingReviews = JSON.parse(localStorage.getItem("honey_haze_public_reviews") || "[]");
-    
-    const randomAvatar = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
-    
-    const newReview = {
-      id: Date.now(),
-      name: order.customerName || "Valued Customer",
-      comment: reviewData.comment || "No comment provided.",
-      rating: reviewData.rating || 5,
-      avatar: randomAvatar,
-      orderId: order.id,
-      riderId: riderId,
-      timestamp: Date.now(),
-      items: order.items.map(i => i.name)
-    };
-
-    const updatedReviews = [newReview, ...existingReviews];
-    localStorage.setItem("honey_haze_public_reviews", JSON.stringify(updatedReviews));
-    
-    toast.success("Added To The Review Archive!", {
-      style: {
-        border: '3px solid #8b5a2b',
-        padding: '16px',
-        color: '#8b5a2b',
-        fontWeight: '900',
-        textTransform: 'uppercase',
-        fontSize: '12px',
-        borderRadius: '20px',
-        background: '#FFE6ED',
-      },
-      iconTheme: {
-        primary: '#8b5a2b',
-        secondary: '#fff',
-      },
-    });
   };
 
   const handleAcceptOrder = (id: string) => {
@@ -160,10 +166,16 @@ export default function OrderHistory() {
       const updatedOrders = orders.filter(o => o.id !== id);
       setOrders(updatedOrders);
       localStorage.setItem("honey_haze_orders", JSON.stringify(updatedOrders));
+      
       const newAccepted = { ...acceptedOrders };
       delete newAccepted[id];
       setAcceptedOrders(newAccepted);
       localStorage.setItem("honey_haze_accepted", JSON.stringify(newAccepted));
+
+      const newToastState = { ...toastActive };
+      delete newToastState[id];
+      setToastActive(newToastState);
+      localStorage.setItem("honey_haze_review_notified", JSON.stringify(newToastState));
     }
   };
 
@@ -280,24 +292,21 @@ export default function OrderHistory() {
                       
                       {progress >= 100 && !isAccepted && (
                         <div className="p-6 bg-[#fdfcf0] border-t-[3px] border-[#8b5a2b] space-y-6">
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
-                               <RiderReview 
-                                 riderName="Rider #204" 
-                                 onSave={(data) => handleSaveReview(data, order, "rider_204")} 
-                               />
-                             </div>
-                             <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
-                               <TipJar />
-                             </div>
-                           </div>
-                           
-                           <button 
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm flex items-center justify-center min-h-[100px] text-center">
+                                <p className="text-[10px] font-black uppercase text-[#8b5a2b]/40">Thank you for ordering with us!</p>
+                              </div>
+                              <div className="bg-white p-4 rounded-3xl border-2 border-[#8b5a2b]/10 shadow-sm">
+                                <TipJar />
+                              </div>
+                            </div>
+                            
+                            <button 
                             onClick={() => handleAcceptOrder(order.id)}
                             className="w-full bg-[#90be6d] text-white border-[3px] border-[#8b5a2b] py-4 rounded-2xl font-black uppercase text-sm shadow-[4px_4px_0_#8b5a2b] hover:scale-[1.01] active:translate-y-1 transition-all flex items-center justify-center gap-3 group"
-                           >
-                            <Check size={20} strokeWidth={4} /> Finalize & Archive Order
-                           </button>
+                            >
+                               <Check size={20} strokeWidth={4} /> Finalize & Archive Order
+                            </button>
                         </div>
                       )}
                     </div>

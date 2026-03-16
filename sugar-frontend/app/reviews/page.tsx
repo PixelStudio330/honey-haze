@@ -1,6 +1,9 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Star, MessageSquare, ShieldCheck, AlertCircle, Trash2, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import RiderReview from "../components/RiderReview";
 
 type Review = {
   id: number;
@@ -26,18 +29,88 @@ export default function Reviews() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newReview, setNewReview] = useState({ name: "", comment: "", rating: 5 });
   const [tooltipId, setTooltipId] = useState<number | null>(null);
-  const [filter, setFilter] = useState("all"); 
+  const [filter, setFilter] = useState("all");
+  
+  // New state to track if a delivery is actually ready for review
+  const [showRiderReview, setShowRiderReview] = useState(false);
+
+  const editContainerRef = useRef<HTMLDivElement>(null);
+  const backupReviews = useRef<Review[]>([]);
 
   useEffect(() => {
+    // 1. Load Reviews
     const saved = localStorage.getItem("honey_haze_public_reviews");
     if (saved) {
-      setReviews(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      setReviews(parsed);
+      backupReviews.current = parsed;
     }
+
+    // 2. Check for completed but un-finalized deliveries
+    const checkDeliveryStatus = () => {
+      const savedOrders = localStorage.getItem("honey_haze_orders");
+      const savedAccepted = localStorage.getItem("honey_haze_accepted");
+      
+      if (savedOrders) {
+        const orders = JSON.parse(savedOrders);
+        const acceptedMap = savedAccepted ? JSON.parse(savedAccepted) : {};
+        
+        const hasCompletedDelivery = orders.some((order: any) => {
+          const packingDuration = 20000; 
+          const deliveryDuration = 40000; 
+          const elapsed = Date.now() - order.startTime;
+          const progress = ((elapsed - packingDuration) / deliveryDuration) * 100;
+          
+          // Show if 100% done AND not yet finalized/archived
+          return progress >= 100 && !acceptedMap[order.id];
+        });
+
+        setShowRiderReview(hasCompletedDelivery);
+      }
+    };
+
+    checkDeliveryStatus();
+    const interval = setInterval(checkDeliveryStatus, 5000); // Poll every 5s
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     localStorage.setItem("honey_haze_public_reviews", JSON.stringify(reviews));
   }, [reviews]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (editContainerRef.current && !editContainerRef.current.contains(event.target as Node)) {
+        if (editingId !== null) {
+          setReviews(backupReviews.current);
+          setEditingId(null);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [editingId]);
+
+  const handleRiderSave = (data: { stars: number; text: string } | null) => {
+    if (data) {
+      const riderEntry: Review = {
+        id: Date.now(),
+        name: "Verified Customer",
+        comment: data.text,
+        rating: data.stars,
+        avatar: "/images/avatars/coffee.jpg",
+        timestamp: Date.now(),
+        orderId: `HH-${Math.floor(1000 + Math.random() * 9000)}`,
+        items: ["Cloud Delivery"]
+      };
+      const updated = [riderEntry, ...reviews];
+      setReviews(updated);
+      backupReviews.current = updated;
+      
+      // Hide the rider review component after saving
+      setShowRiderReview(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, id?: number) => {
     if (id !== undefined) {
@@ -60,6 +133,24 @@ export default function Reviews() {
     }
   };
 
+  const handleSaveChanges = (id: number) => {
+    const originalReview = backupReviews.current.find(r => r.id === id);
+    const editedReview = reviews.find(r => r.id === id);
+
+    if (originalReview && editedReview) {
+      if (editedReview.rating < originalReview.rating) {
+        const revertedReviews = reviews.map(r => 
+          r.id === id ? { ...r, rating: originalReview.rating } : r
+        );
+        setReviews(revertedReviews);
+        backupReviews.current = revertedReviews;
+      } else {
+        backupReviews.current = [...reviews];
+      }
+    }
+    setEditingId(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReview.name.trim() || !newReview.comment.trim()) return;
@@ -72,8 +163,9 @@ export default function Reviews() {
         timestamp: Date.now() 
     };
     
-    setReviews([reviewToAdd, ...reviews]);
-    alert("Thanks For Your Feedback! 💖");
+    const updated = [reviewToAdd, ...reviews];
+    setReviews(updated);
+    backupReviews.current = updated;
     setNewReview({ name: "", comment: "", rating: 5 });
   };
 
@@ -81,11 +173,9 @@ export default function Reviews() {
     if (window.confirm("Remove this review from history?")) {
       const updated = reviews.filter(r => r.id !== id);
       setReviews(updated);
+      backupReviews.current = updated;
     }
   };
-
-  const handleEdit = (id: number) => setEditingId(id);
-  const handleSubmitEdit = () => setEditingId(null);
 
   const filteredReviews = reviews.filter(r => {
     if (filter === "high") return r.rating >= 4;
@@ -122,13 +212,31 @@ export default function Reviews() {
   );
 
   return (
-    <section className="pt-54 pb-24 bg-[#F0EBD1] flex flex-col items-center gap-8 min-h-screen">
+    <section className="pt-24 pb-24 bg-[#F0EBD1] flex flex-col items-center gap-8 min-h-screen relative">
+      <Link href="/orders" className="absolute top-8 left-8 p-3 bg-white rounded-full border-2 border-[#8b5a2b] shadow-[4px_4px_0_#8b5a2b] active:translate-y-1 active:shadow-none transition-all">
+        <ArrowLeft size={24} className="text-[#8b5a2b]" />
+      </Link>
+
       <div className="text-center mb-10 pt-20">
         <h1 className="text-5xl sm:text-6xl font-extrabold text-[#C98895] mb-4">
           🌸 Reviews & Feedback 🌸
         </h1>
         <p className="text-[#8b5a2b] font-black uppercase text-[10px] tracking-[0.2em]">The Review Archive</p>
       </div>
+
+      {/* Conditional Rendering Logic Applied Here */}
+      <AnimatePresence>
+        {showRiderReview && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="w-full flex justify-center overflow-hidden"
+          >
+            <RiderReview riderName="Swift Saffron" onSave={handleRiderSave} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex gap-4 mb-8 bg-white/50 p-2 rounded-2xl border-2 border-[#D4A24C]/20 shadow-inner">
         {['all', 'high', 'recent'].map((f) => (
@@ -146,10 +254,10 @@ export default function Reviews() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-8 w-full max-w-5xl px-6">
+      <div className="flex flex-col gap-8 w-full max-w-5xl px-6" ref={editContainerRef}>
         <AnimatePresence mode="popLayout">
           {filteredReviews.length === 0 ? (
-            <div className="text-center py-10 text-[#C98895]/50 font-bold italic">No reviews found in this category...</div>
+            <div className="text-center py-10 text-[#C98895]/50 font-bold italic">No reviews found...</div>
           ) : (
             filteredReviews.map(review => {
               const isEditing = editingId === review.id;
@@ -183,7 +291,7 @@ export default function Reviews() {
                           name="name"
                           value={review.name}
                           onChange={(e) => handleChange(e, review.id)}
-                          className="text-[#C98895] font-bold text-lg p-2 rounded-md border border-[#D4A24C] focus:outline-none"
+                          className="text-[#C98895] font-bold text-lg p-2 rounded-md border border-[#D4A24C] focus:outline-none bg-transparent"
                         />
                       ) : (
                         <div>
@@ -198,7 +306,7 @@ export default function Reviews() {
                       )}
                       <div className="flex gap-4">
                         {!isEditing && (
-                          <button onClick={() => handleEdit(review.id)} className="text-[10px] font-black uppercase text-[#D4A24C] hover:underline">
+                          <button onClick={() => setEditingId(review.id)} className="text-[10px] font-black uppercase text-[#D4A24C] hover:underline">
                             Edit
                           </button>
                         )}
@@ -217,10 +325,10 @@ export default function Reviews() {
                           value={review.comment}
                           onChange={(e) => handleChange(e, review.id)}
                           rows={3}
-                          className="w-full p-3 rounded-md border border-[#D4A24C] text-[#C98895] focus:outline-none"
+                          className="w-full p-3 rounded-md border border-[#D4A24C] text-[#C98895] focus:outline-none bg-transparent"
                         />
                         <button
-                          onClick={handleSubmitEdit}
+                          onClick={() => handleSaveChanges(review.id)}
                           className="bg-[#C98895] text-white font-black py-2 px-6 rounded-full shadow-md text-[10px] uppercase tracking-widest active:scale-95 transition-all"
                         >
                           Save Changes ✨
@@ -266,7 +374,7 @@ export default function Reviews() {
           placeholder="Your Name"
           value={newReview.name}
           onChange={handleChange}
-          className="w-full p-4 rounded-xl border border-[#D4A24C]/30 focus:outline-none focus:ring-2 focus:ring-[#D4A24C] placeholder:text-[#C98895]/50 text-[#C98895]"
+          className="w-full p-4 rounded-xl border border-[#D4A24C]/30 focus:outline-none focus:ring-2 focus:ring-[#D4A24C] placeholder:text-[#C98895]/50 text-[#C98895] bg-transparent"
           required
         />
 
@@ -276,7 +384,7 @@ export default function Reviews() {
           rows={4}
           value={newReview.comment}
           onChange={handleChange}
-          className="w-full p-4 rounded-xl border border-[#D4A24C]/30 focus:outline-none focus:ring-2 focus:ring-[#D4A24C] placeholder:text-[#C98895]/50 text-[#C98895]"
+          className="w-full p-4 rounded-xl border border-[#D4A24C]/30 focus:outline-none focus:ring-2 focus:ring-[#D4A24C] placeholder:text-[#C98895]/50 text-[#C98895] bg-transparent"
           required
         />
 
