@@ -7,7 +7,8 @@ import Header from "./components/Header";
 import Cart, { CartItem } from "./components/Cart";
 import { Inter } from "next/font/google";
 import { useState, useEffect } from "react";
-import { SessionProvider } from "next-auth/react"; // Added this
+import { SessionProvider } from "next-auth/react";
+import Lenis from "@studio-freight/lenis"; // 1. Import Lenis
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,6 +17,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [cartOpen, setCartOpen] = useState(false);
   const [isOrdered, setIsOrdered] = useState(false);
 
+  // --- Lenis Smooth Scroll Implementation ---
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Custom easing for that "Mac" feel
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+
+    function raf(time: number) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+
+  // --- Cart Sync Logic ---
   useEffect(() => {
     const syncCart = () => {
       const savedCart = localStorage.getItem("honey_haze_cart");
@@ -42,8 +69,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en">
-      <body className={`${inter.className} relative bg-[#F0EBD1]`}>
-        <SessionProvider> {/* Wrapped entire body */}
+      <body className={`${inter.className} relative bg-[#F0EBD1] antialiased`}>
+        <SessionProvider>
           <SparkleTrail />
           <Header />
 

@@ -1,66 +1,109 @@
 'use client';
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
+import { Phone, Heart, Sparkles, Utensils } from "lucide-react";
 
 export default function Helpline() {
   const icons = [
-    { icon: "📞", top: "10%", left: "15%" },
-    { icon: "🌸", top: "30%", left: "70%" },
-    { icon: "✨", top: "60%", left: "40%" },
-    { icon: "🥨", top: "80%", left: "20%" },
+    { icon: <Phone size={48} />, top: "15%", left: "10%", color: "#C98895" },
+    { icon: <Heart size={40} />, top: "25%", left: "80%", color: "#D4A24C" },
+    { icon: <Sparkles size={56} />, top: "65%", left: "15%", color: "#82A899" },
+    { icon: <Utensils size={44} />, top: "75%", left: "75%", color: "#C98895" },
   ];
 
+  const floatingVariants: Variants = {
+    animate: (i: number) => ({
+      y: [0, -20, 0],
+      x: [0, 10, 0],
+      rotate: [0, 10, -10, 0],
+      transition: {
+        duration: 5 + i,
+        repeat: Infinity,
+        ease: "easeInOut",
+      },
+    }),
+  };
+
   return (
-    <section className="relative bg-[#F0EBD1] min-h-screen flex flex-col items-center justify-center text-center overflow-hidden">
+    <main className="relative bg-[#F0EBD1] min-h-screen flex flex-col items-center justify-center text-center overflow-hidden p-6 selection:bg-[#C98895]/30">
       
-      {/* FLOATING ICONS */}
-      <div className="absolute inset-0 pointer-events-none z-10">
+      {/* Dynamic Background Gradients */}
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#D4A24C]/10 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-[#C98895]/10 rounded-full blur-[120px] animate-pulse" />
+
+      {/* FLOATING AESTHETIC ICONS */}
+      <div className="absolute inset-0 pointer-events-none">
         {icons.map((item, i) => (
           <motion.div
             key={i}
-            className="absolute text-5xl opacity-30"
-            style={{ top: item.top, left: item.left }}
-            animate={{
-              y: [0, 10, 0],
-              x: [-5, 5, -5],
-              rotate: [0, 15, 0, -15],
-            }}
-            transition={{
-              duration: 6 + Math.random() * 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 0.3,
-            }}
+            custom={i}
+            variants={floatingVariants}
+            animate="animate"
+            className="absolute opacity-20 hidden sm:block"
+            style={{ top: item.top, left: item.left, color: item.color }}
           >
             {item.icon}
           </motion.div>
         ))}
       </div>
 
-      {/* HEADER */}
-      <motion.h2
-        className="text-5xl sm:text-6xl font-extrabold text-[#C98895] mb-0"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1 }}
-      >
-        Need Assistance? 📞
-      </motion.h2>
+      {/* CONTENT CARD */}
+      <section className="relative z-10 max-w-2xl flex flex-col items-center">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          className="space-y-6"
+        >
+          <div className="inline-block px-4 py-1.5 bg-[#C98895]/10 border border-[#C98895]/20 rounded-full text-[#C98895] text-[10px] font-black uppercase tracking-[0.4em] mb-4">
+            Support Line
+          </div>
 
-      <p className="text-[#8A5559] text-lg sm:text-xl mb-10 sm:w-2/3">
-        Call our helpline anytime. We’re always here for you! 💖✨
-      </p>
+          <h1 className="text-5xl sm:text-7xl font-black text-[#C98895] tracking-tighter leading-tight">
+            Need <span className="text-[#8b5a2b]">Assistance?</span>
+          </h1>
 
-      {/* PHONE NUMBER */}
-      <motion.a
-        href="tel:+1234567890"
-        className="text-4xl sm:text-5xl font-bold text-[#D4A24C] bg-white/70 backdrop-blur-md px-8 py-4 rounded-3xl shadow-lg hover:scale-105 transition-transform duration-300"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 1 }}
-      >
-        +888 017xxxxxxxx
-      </motion.a>
+          <p className="text-[#8b5a2b] text-lg sm:text-xl font-medium leading-relaxed max-w-md mx-auto">
+            Our hive is always open. Reach out anytime for a little extra 
+            <span className="italic"> sweetness</span> in your day. 🍯✨
+          </p>
+        </motion.div>
 
-    </section>
+        {/* INTERACTIVE PHONE BUTTON */}
+        <motion.div 
+          className="mt-12"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          <motion.a
+            href="tel:+88801700000000"
+            className="group relative flex items-center gap-4 bg-white/60 backdrop-blur-xl px-10 py-6 rounded-[2.5rem] border-4 border-white/80 shadow-[15px_15px_0_rgba(212,162,76,0.1)] transition-all"
+            whileHover={{ 
+              scale: 1.02, 
+              y: -5,
+              boxShadow: "20px 20px 0px rgba(201,136,149,0.15)"
+            }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="bg-[#D4A24C] p-3 rounded-2xl text-white group-hover:rotate-12 transition-transform">
+              <Phone fill="currentColor" size={24} />
+            </div>
+            <span className="text-3xl sm:text-4xl font-black text-[#8b5a2b] tracking-tight">
+              +888 017xxxxxxxx
+            </span>
+          </motion.a>
+        </motion.div>
+
+        {/* SUBTITLE */}
+        <motion.p 
+          className="mt-10 text-[#C98895] text-xs font-black uppercase tracking-[0.2em] opacity-60"
+          animate={{ opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 3, repeat: Infinity }}
+        >
+          Available 24/7 for the chaos
+        </motion.p>
+      </section>
+
+    </main>
   );
 }

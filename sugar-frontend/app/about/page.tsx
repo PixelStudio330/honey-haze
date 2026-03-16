@@ -1,116 +1,147 @@
 'use client';
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
+import { Sparkles, Heart, Zap, Coffee, Utensils } from "lucide-react";
+import Link from "next/link";
 
 export default function About() {
-
   const funFacts = [
-    "Started in 2018 🍰",
-    "Only two spicy items 🌶️ (but iconic!)",
-    "Fast, friendly service 🚀",
-    "All desserts made with love 💖",
-    "Honey Haze deliveries = instant happiness 🧁",
+    { text: "Started in 2018 🍰", icon: <Heart size={18} /> },
+    { text: "Only two spicy items 🌶️", icon: <Zap size={18} /> },
+    { text: "Fast, friendly service 🚀", icon: <Sparkles size={18} /> },
+    { text: "All desserts made with love 💖", icon: <Coffee size={18} /> },
+    { text: "Honey Haze = Happiness 🧁", icon: <Utensils size={18} /> },
   ];
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.2 }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1, 
+      transition: { 
+        type: "spring", // TypeScript now infers this correctly via Variants
+        stiffness: 100 
+      } 
+    }
+  };
 
   return (
     <>
+      <main className="relative min-h-screen bg-[#F0EBD1] flex flex-col items-center justify-start p-6 overflow-hidden font-medium selection:bg-[#C98895]/30">
+        
+        {/* Animated Background Elements */}
+        <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-[#C98895]/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-[#D4A24C]/10 rounded-full blur-3xl animate-pulse" />
 
-
-      <main className="relative min-h-screen bg-gradient-to-b from-[#F0EBD1] to-[#FFF8E1] flex flex-col items-center justify-start p-6 text-center overflow-x-hidden">
-
-        {/* Main Heading */}
-        <section className="mt-32 sm:mt-40 max-w-4xl px-4 text-center space-y-8 z-30">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-[#C98895] animate-glow-bounce">
-            🥞 Honey Haze Magic 🍯
-          </h1>
-          <motion.p
-            className="text-[#82A899] text-lg sm:text-xl bg-white/50 backdrop-blur-md p-6 rounded-3xl shadow-lg relative z-20"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
+        {/* Main Heading Section */}
+        <section className="mt-32 sm:mt-40 max-w-4xl px-4 text-center space-y-12 z-10">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.8 }}
           >
-            Born in <span className="font-bold">2018</span>, Honey Haze is your chaotic paradise of desserts and delight 💖. 
-            Only two spicy items 🌶️, but every sweet treat 🍰 is a masterpiece of chaos and cuteness.
-          </motion.p>
-          <motion.p
-            className="text-[#82A899] text-lg sm:text-xl bg-white/50 backdrop-blur-md p-6 rounded-3xl shadow-lg relative z-20"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.5 }}
-          >
-            Why us? <span className="font-bold sparkle">Fast service</span>, <span className="font-bold sparkle">friendly faces</span>, <span className="font-bold sparkle">food that tastes as good as it looks</span>. Every order is a little adventure of sweetness and joy 🧁✨.
-          </motion.p>
+            <h1 className="text-6xl sm:text-8xl font-black text-[#C98895] tracking-tighter drop-shadow-sm leading-tight">
+              Honey <span className="text-[#8b5a2b]">Haze</span> Magic
+            </h1>
+            <div className="inline-block mt-4 px-6 py-2 bg-white/40 backdrop-blur-sm border-2 border-[#D4A24C]/20 rounded-full text-[#8b5a2b] text-xs font-black uppercase tracking-[0.3em]">
+              The Aesthetic Archive
+            </div>
+          </motion.div>
+
+          <div className="space-y-6">
+            <motion.p
+              className="text-[#8b5a2b] text-xl sm:text-2xl leading-relaxed bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[20px_20px_0_rgba(201,136,149,0.05)] border-4 border-white/80"
+              variants={itemVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              Born in <span className="text-[#C98895] font-black italic">2018</span>, Honey Haze is your cozy paradise of desserts and digital delight. 
+              Only two spicy items <span className="inline-block animate-bounce">🌶️</span>, but every sweet treat is a masterpiece of chaos and cuteness.
+            </motion.p>
+          </div>
         </section>
 
-        {/* Fun Fact Bubbles */}
-        <section className="mt-16 w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-6 px-4 z-30">
+        {/* Floating Fun Fact Pills */}
+        <motion.section 
+          className="mt-20 w-full max-w-5xl flex flex-wrap justify-center gap-4 px-4 z-10"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
           {funFacts.map((fact, i) => (
             <motion.div
               key={i}
-              className="bg-white/50 backdrop-blur-md p-6 rounded-3xl shadow-lg text-[#82A899] font-medium text-lg flex items-center justify-center transform -rotate-[2deg] hover:rotate-[2deg] cursor-pointer"
-              initial={{ scale: 0.8, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 + i*0.2 }}
-              whileHover={{ scale: 1.05 }}
+              variants={itemVariants}
+              whileHover={{ y: -10, rotate: i % 2 === 0 ? 2 : -2 }}
+              className="bg-white/80 backdrop-blur-md px-8 py-5 rounded-full shadow-[8px_8px_0_rgba(139,90,43,0.1)] border-2 border-[#D4A24C]/10 text-[#82A899] font-black text-sm uppercase tracking-wider flex items-center gap-3 cursor-default"
             >
-              {fact}
+              <span className="text-[#D4A24C]">{fact.icon}</span>
+              {fact.text}
             </motion.div>
           ))}
-        </section>
+        </motion.section>
 
-        {/* Spicy Section */}
-        <section className="mt-16 max-w-4xl px-4 text-center space-y-6 z-30">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#C98895] animate-wiggle">🌶️ Our Legendary Spicy Treats 🌶️</h2>
-          <motion.p
-            className="text-[#82A899] text-lg sm:text-xl bg-white/50 backdrop-blur-md p-6 rounded-3xl shadow-lg"
-            initial={{ x: -50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 1.2 }}
+        {/* Spicy Section - High Contrast */}
+        <section className="mt-24 max-w-3xl w-full px-4 z-10">
+          <motion.div 
+            className="bg-[#C98895] p-1 text-white rounded-[4rem] shadow-2xl overflow-hidden"
+            initial={{ y: 50, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
           >
-            Only two spicy items, but they’re iconic 🔥. Perfect heat, bold flavor, and a pinch of chaos that keeps people coming back.
-          </motion.p>
+            <div className="bg-[#C98895] border-4 border-dashed border-white/30 rounded-[3.8rem] p-12 text-center">
+              <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter mb-4 flex items-center justify-center gap-4">
+                <Zap className="fill-white" /> Legendary Spice <Zap className="fill-white" />
+              </h2>
+              <p className="text-white/90 text-lg font-medium italic">
+                "Only two spicy items, but they’re iconic. Perfect heat, bold flavor, and a pinch of chaos that keeps the hive buzzing."
+              </p>
+            </div>
+          </motion.div>
         </section>
 
-        {/* CTA */}
-        <motion.button 
-          className="mt-20 bg-[#D4A24C] hover:bg-[#9CAF88] text-white font-bold py-3 px-10 rounded-full shadow-lg transform hover:scale-110 transition duration-300 z-30"
-          whileHover={{ rotate: [0, 5, -5, 0], scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          Sprinkle Some Chaos 💖
-        </motion.button>
+        {/* CTA Section */}
+        <motion.div 
+  className="mt-24 mb-20 flex flex-col items-center gap-6"
+  initial={{ opacity: 0 }}
+  whileInView={{ opacity: 1 }}
+>
+  <div className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4A24C]">
+    Ready for the Haze?
+  </div>
+  
+  <Link href="/" passHref>
+    <motion.button 
+      className="bg-[#8b5a2b] hover:bg-[#C98895] text-white font-black py-6 px-14 rounded-full shadow-[10px_10px_0_#D4A24C] text-sm uppercase tracking-widest transition-all"
+      whileHover={{ 
+        scale: 1.05, 
+        y: -5, 
+        boxShadow: "12px 12px 0px #C98895" 
+      }}
+      whileTap={{ scale: 0.95 }}
+    >
+      Sprinkle Some Chaos ✨
+    </motion.button>
+  </Link>
+</motion.div>
 
       </main>
 
-      <style jsx>{`
-        @keyframes glowBounceUpDown {
-          0%, 100% { transform: translateY(0); text-shadow: 0 0 6px #FAF0D7, 0 0 10px #FAF0D7, 0 0 20px #FAF0D7; }
-          50% { transform: translateY(-15px); text-shadow: 0 0 14px #FAF0D7, 0 0 25px #FAF0D7, 0 0 35px #FAF0D7; }
+      <style jsx global>{`
+        @keyframes subtleFloating {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(1deg); }
         }
-        .animate-glow-bounce { animation: glowBounceUpDown 1.5s ease-in-out infinite; }
-        @keyframes wiggle {
-          0% { transform: rotate(0deg); }
-          25% { transform: rotate(2deg); }
-          50% { transform: rotate(-2deg); }
-          75% { transform: rotate(1deg); }
-          100% { transform: rotate(0deg); }
-        }
-        .animate-wiggle { animation: wiggle 2s ease-in-out infinite; }
-        .sparkle { position: relative; }
-        .sparkle::after {
-          content: "✨";
-          position: absolute;
-          top: -5px;
-          right: -5px;
-          font-size: 0.8rem;
-          opacity: 0.7;
-          animation: sparkleAnim 1.5s infinite;
-        }
-        @keyframes sparkleAnim {
-          0% { opacity: 0.3; transform: scale(0.8) rotate(0deg); }
-          50% { opacity: 1; transform: scale(1.2) rotate(20deg); }
-          100% { opacity: 0.3; transform: scale(0.8) rotate(0deg); }
-        }
+        .animate-subtle { animation: subtleFloating 4s ease-in-out infinite; }
       `}</style>
     </>
   );

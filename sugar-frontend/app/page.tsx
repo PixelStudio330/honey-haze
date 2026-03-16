@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { Minus, Plus, ReceiptText, Trash2, LogIn } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 // 🌸 BACKUP DATA
 const backupFoods: FoodItem[] = [
@@ -22,11 +24,13 @@ interface FoodItem {
 }
 
 export default function Home() {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [hasMounted, setHasMounted] = useState(false);
   const [filter, setFilter] = useState("all");
   const [foods, setFoods] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [notification, setNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'auth' } | null>(null);
   
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
@@ -64,6 +68,14 @@ export default function Home() {
   };
 
   const addToCart = (item: FoodItem) => {
+    // 🍯 AUTH CHECK: If no session, show the login toast
+    if (!session) {
+      setNotification({ message: "Want to order? Sign in! ૮₍ ˶ᵔ ᵕ ᵔ˶ ₎ა", type: 'auth' });
+      // Keep auth toast visible longer so they can click it
+      setTimeout(() => setNotification(null), 5000);
+      return;
+    }
+
     let currentCart = [...cartItems];
     const foodIdStr = String(item.id);
     const existingIndex = currentCart.findIndex((f: any) => f.foodId === foodIdStr);
@@ -88,7 +100,7 @@ export default function Home() {
       setHasOpenedOnce(true);
     }
 
-    setNotification(`${item.name} added!🍓`);
+    setNotification({ message: `${item.name} added!🍓`, type: 'success' });
     setTimeout(() => setNotification(null), 2000);
   };
 
@@ -140,7 +152,6 @@ export default function Home() {
   if (!hasMounted) return <div className="min-h-screen bg-[#F0EBD1]" />;
 
   return (
-    /* REMOVED pt-24 to let hero touch the top */
     <main className="relative min-h-screen bg-[#F0EBD1] flex flex-col items-center justify-start text-center overflow-x-hidden">
       
       <AnimatePresence>
@@ -175,15 +186,30 @@ export default function Home() {
 
       <AnimatePresence>
         {notification && (
-          <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 100 }} exit={{ opacity: 0, y: -50 }}
-            className="fixed top-4 z-[110] bg-[#82A899] text-white px-6 py-3 rounded-full font-bold shadow-lg border-2 border-white flex items-center gap-2"
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }} 
+            animate={{ opacity: 1, y: 100 }} 
+            exit={{ opacity: 0, y: -50 }}
+            className={`fixed top-4 z-[110] px-6 py-3 rounded-full font-bold shadow-lg border-2 border-white flex items-center gap-4 ${
+              notification.type === 'auth' ? 'bg-[#C98895]' : 'bg-[#82A899]'
+            } text-white`}
           >
-            ✅ {notification}
+            <span className="flex items-center gap-2">
+              {notification.type === 'auth' ? '🍯' : '✅'} {notification.message}
+            </span>
+            
+            {notification.type === 'auth' && (
+              <button 
+                onClick={() => router.push('/login')}
+                className="bg-white text-[#C98895] px-4 py-1 rounded-full text-xs font-black uppercase flex items-center gap-1 hover:bg-[#FDF6F8] transition-colors"
+              >
+                <LogIn size={12} /> Sign In
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Hero Section - UPDATED: Cleaned container, removed rounded corners and max-width for top-flush fit */}
       <div className="relative w-full h-[450px] md:h-[600px] flex flex-col items-center justify-center z-0 overflow-hidden">
         <Image 
           src="/images/new-hero.jpg" 
@@ -202,7 +228,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Content wrapper for padding */}
       <div className="w-full flex flex-col items-center px-6">
         <div className="z-10 flex gap-4 mt-8 mb-6">
             {["all", "sweet", "spicy"].map((type) => (

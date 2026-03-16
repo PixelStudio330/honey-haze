@@ -40,7 +40,7 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 w-full z-[100] bg-white/80 backdrop-blur-md border-b-[3px] border-[#F4C2C2]/50 bg-clip-padding">
-      <div className="flex justify-between items-center px-6 md:px-10 py-5">
+      <div className="flex justify-between items-center px-6 md:px-10 py-7 bg-amber-50">
         <Link
           href="/"
           className="flex items-center gap-3 group"

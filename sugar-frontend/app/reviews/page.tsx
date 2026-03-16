@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MessageSquare, ShieldCheck, AlertCircle, Trash2, ArrowLeft } from "lucide-react";
+import { Star, Trash2, ArrowLeft, Sparkles, Heart, Zap } from "lucide-react";
 import Link from "next/link";
 import RiderReview from "../components/RiderReview";
 
@@ -30,8 +30,6 @@ export default function Reviews() {
   const [newReview, setNewReview] = useState({ name: "", comment: "", rating: 5 });
   const [tooltipId, setTooltipId] = useState<number | null>(null);
   const [filter, setFilter] = useState("all");
-  
-  // New state to track if a delivery is actually ready for review
   const [showRiderReview, setShowRiderReview] = useState(false);
 
   const editContainerRef = useRef<HTMLDivElement>(null);
@@ -61,7 +59,6 @@ export default function Reviews() {
           const elapsed = Date.now() - order.startTime;
           const progress = ((elapsed - packingDuration) / deliveryDuration) * 100;
           
-          // Show if 100% done AND not yet finalized/archived
           return progress >= 100 && !acceptedMap[order.id];
         });
 
@@ -70,7 +67,7 @@ export default function Reviews() {
     };
 
     checkDeliveryStatus();
-    const interval = setInterval(checkDeliveryStatus, 5000); // Poll every 5s
+    const interval = setInterval(checkDeliveryStatus, 5000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -106,8 +103,6 @@ export default function Reviews() {
       const updated = [riderEntry, ...reviews];
       setReviews(updated);
       backupReviews.current = updated;
-      
-      // Hide the rider review component after saving
       setShowRiderReview(false);
     }
   };
@@ -186,23 +181,24 @@ export default function Reviews() {
   });
 
   const renderStars = (review: Review, isEditing: boolean) => (
-    <div className="relative flex text-2xl text-[#D4A24C]">
+    <div className="relative flex text-3xl text-[#D4A24C]">
       {[1, 2, 3, 4, 5].map(starValue => (
-        <span
+        <motion.span
           key={starValue}
-          className={`cursor-pointer transition-transform ${isEditing ? 'hover:scale-125' : ''} ${starValue <= review.rating ? "text-[#D4A24C]" : "text-[#F0EBD1]/50"}`}
+          whileHover={isEditing ? { scale: 1.3, rotate: 15 } : {}}
+          className={`cursor-pointer transition-colors ${starValue <= review.rating ? "text-[#D4A24C]" : "text-[#D4A24C]/20"}`}
           onClick={() => handleStarClick(starValue, review.id)}
         >
           ★
-        </span>
+        </motion.span>
       ))}
       <AnimatePresence>
         {tooltipId === review.id && !isEditing && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: -20 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute -top-8 left-0 bg-[#C98895] text-white text-[10px] font-black uppercase px-3 py-1 rounded-lg shadow-lg whitespace-nowrap z-10"
+            initial={{ opacity: 0, y: 10, scale: 0.8 }}
+            animate={{ opacity: 1, y: -30, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute -top-10 left-0 bg-[#C98895] text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-full shadow-[4px_4px_0_#8b5a2b] whitespace-nowrap z-10"
           >
             Click 'Edit' to change rating 👀
           </motion.div>
@@ -212,41 +208,46 @@ export default function Reviews() {
   );
 
   return (
-    <section className="pt-24 pb-24 bg-[#F0EBD1] flex flex-col items-center gap-8 min-h-screen relative">
-      <Link href="/orders" className="absolute top-8 left-8 p-3 bg-white rounded-full border-2 border-[#8b5a2b] shadow-[4px_4px_0_#8b5a2b] active:translate-y-1 active:shadow-none transition-all">
-        <ArrowLeft size={24} className="text-[#8b5a2b]" />
-      </Link>
+    <section className="pt-32 pb-32 bg-[#F0EBD1] flex flex-col items-center gap-12 min-h-screen relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-20 left-[10%] opacity-20 rotate-12 text-[#C98895]"><Sparkles size={120} /></div>
+      <div className="absolute bottom-20 right-[10%] opacity-10 -rotate-12 text-[#D4A24C]"><Zap size={160} /></div>
 
-      <div className="text-center mb-10 pt-20">
-        <h1 className="text-5xl sm:text-6xl font-extrabold text-[#C98895] mb-4">
-          🌸 Reviews & Feedback 🌸
-        </h1>
-        <p className="text-[#8b5a2b] font-black uppercase text-[10px] tracking-[0.2em]">The Review Archive</p>
+      <div className="text-center relative z-10">
+        <motion.h1 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-6xl md:text-8xl font-black text-[#C98895] mb-4 drop-shadow-sm"
+        >
+          Review <span className="text-[#8b5a2b]">Hive</span>
+        </motion.h1>
+        <p className="text-[#8b5a2b] font-black uppercase text-xs tracking-[0.4em] bg-white/50 inline-block px-4 py-1 rounded-full">The Feedback Archive</p>
       </div>
 
-      {/* Conditional Rendering Logic Applied Here */}
       <AnimatePresence>
         {showRiderReview && (
           <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="w-full flex justify-center overflow-hidden"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="w-full flex justify-center z-20"
           >
-            <RiderReview riderName="Swift Saffron" onSave={handleRiderSave} />
+            <div className="border-4 border-dashed border-[#C98895] p-2 rounded-[2.5rem]">
+                <RiderReview riderName="Swift Saffron" onSave={handleRiderSave} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex gap-4 mb-8 bg-white/50 p-2 rounded-2xl border-2 border-[#D4A24C]/20 shadow-inner">
+      <div className="flex gap-3 bg-white/60 p-2 rounded-[2rem] border-4 border-[#D4A24C]/20 shadow-xl backdrop-blur-sm z-10">
         {['all', 'high', 'recent'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
+            className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase transition-all ${
               filter === f 
-              ? "bg-[#C98895] text-white shadow-md scale-105" 
-              : "text-[#C98895] hover:bg-white/50"
+              ? "bg-[#C98895] text-white shadow-[4px_4px_0_#8b5a2b] -translate-y-1" 
+              : "text-[#C98895] hover:bg-white/80"
             }`}
           >
             {f === 'high' ? 'Top Rated' : f}
@@ -254,88 +255,93 @@ export default function Reviews() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-8 w-full max-w-5xl px-6" ref={editContainerRef}>
+      <div className="flex flex-col gap-10 w-full max-w-5xl px-6 relative z-10" ref={editContainerRef}>
         <AnimatePresence mode="popLayout">
           {filteredReviews.length === 0 ? (
-            <div className="text-center py-10 text-[#C98895]/50 font-bold italic">No reviews found...</div>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20 text-[#C98895]/40 font-black uppercase text-sm italic tracking-widest"
+            >
+              The hive is quiet... Leave a note! 🌸
+            </motion.div>
           ) : (
-            filteredReviews.map(review => {
+            filteredReviews.map((review, idx) => {
               const isEditing = editingId === review.id;
               return (
                 <motion.div
                   key={review.id}
                   layout
-                  className="flex flex-col sm:flex-row items-start sm:items-center gap-6 bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-8 border-b-4 border-[#D4A24C]/10"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, x: idx % 2 === 0 ? -20 : 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex flex-col md:flex-row items-center md:items-start gap-8 bg-white/95 backdrop-blur-md rounded-[3rem] shadow-[12px_12px_0_rgba(201,136,149,0.1)] p-10 border-4 border-[#D4A24C]/10 hover:border-[#D4A24C]/40 transition-all group"
                 >
-                  <div className="relative">
-                    <img
-                      src={review.avatar || defaultAvatars[0]}
-                      alt={review.name}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-[#D4A24C] shadow-sm"
-                    />
+                  <div className="relative shrink-0">
+                    <motion.div 
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-[#D4A24C] shadow-lg"
+                    >
+                        <img src={review.avatar || defaultAvatars[0]} alt={review.name} className="w-full h-full object-cover" />
+                    </motion.div>
                     {review.orderId && (
-                      <div className="absolute -bottom-2 -right-2 bg-[#9CAF88] text-white text-[8px] font-black px-2 py-1 rounded-full border-2 border-white uppercase">
+                      <div className="absolute -bottom-3 -right-3 bg-[#9CAF88] text-white text-[9px] font-black px-3 py-1.5 rounded-full border-2 border-white shadow-md transform -rotate-12 uppercase">
                         Verified
                       </div>
                     )}
                   </div>
 
-                  <div className="flex flex-col w-full gap-2">
-                    <div className="flex justify-between items-center">
+                  <div className="flex flex-col w-full gap-4">
+                    <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-4">
                       {isEditing ? (
                         <input
                           type="text"
                           name="name"
                           value={review.name}
                           onChange={(e) => handleChange(e, review.id)}
-                          className="text-[#C98895] font-bold text-lg p-2 rounded-md border border-[#D4A24C] focus:outline-none bg-transparent"
+                          className="text-[#C98895] font-black text-2xl p-3 rounded-2xl border-2 border-[#D4A24C] focus:outline-none bg-[#FDF6F8] w-full md:w-auto"
                         />
                       ) : (
-                        <div>
-                          <h3 className="font-bold text-[#C98895] flex items-center gap-2">
-                              {review.name}
-                              {review.rating === 5 && <span className="text-[10px] bg-[#D4A24C]/20 px-2 py-0.5 rounded-full">Elite Member</span>}
+                        <div className="text-center md:text-left">
+                          <h3 className="text-3xl font-black text-[#C98895] flex items-center justify-center md:justify-start gap-3">
+                            {review.name}
+                            {review.rating === 5 && <span className="text-[9px] bg-[#D4A24C] text-white px-3 py-1 rounded-full uppercase tracking-tighter">Elite Honey</span>}
                           </h3>
                           {review.items && (
-                            <p className="text-[9px] text-[#8b5a2b]/50 font-black uppercase">Ordered: {review.items.join(", ")}</p>
+                            <p className="text-[10px] text-[#8b5a2b]/60 font-black uppercase mt-1">Ordered: {review.items.join(" • ")}</p>
                           )}
                         </div>
                       )}
-                      <div className="flex gap-4">
+                      <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
                         {!isEditing && (
-                          <button onClick={() => setEditingId(review.id)} className="text-[10px] font-black uppercase text-[#D4A24C] hover:underline">
-                            Edit
-                          </button>
+                          <button onClick={() => setEditingId(review.id)} className="text-[11px] font-black uppercase text-[#D4A24C] hover:scale-110 transition-transform">Edit</button>
                         )}
-                        <button onClick={() => handleDelete(review.id)} className="text-[10px] font-black uppercase text-[#C98895] hover:underline">
-                          Delete
-                        </button>
+                        <button onClick={() => handleDelete(review.id)} className="text-[11px] font-black uppercase text-[#C98895] hover:scale-110 transition-transform">Delete</button>
                       </div>
                     </div>
 
-                    {renderStars(review, isEditing)}
+                    <div className="flex justify-center md:justify-start">{renderStars(review, isEditing)}</div>
 
                     {isEditing ? (
-                      <div className="mt-2 space-y-3">
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 space-y-4">
                         <textarea
                           name="comment"
                           value={review.comment}
                           onChange={(e) => handleChange(e, review.id)}
                           rows={3}
-                          className="w-full p-3 rounded-md border border-[#D4A24C] text-[#C98895] focus:outline-none bg-transparent"
+                          className="w-full p-5 rounded-3xl border-2 border-[#D4A24C] text-[#8b5a2b] font-medium focus:outline-none bg-[#FDF6F8]"
                         />
                         <button
                           onClick={() => handleSaveChanges(review.id)}
-                          className="bg-[#C98895] text-white font-black py-2 px-6 rounded-full shadow-md text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                          className="bg-[#C98895] text-white font-black py-4 px-10 rounded-2xl shadow-[4px_4px_0_#8b5a2b] text-[11px] uppercase tracking-[0.2em] active:translate-y-1 active:shadow-none transition-all"
                         >
-                          Save Changes ✨
+                          Update Record ✨
                         </button>
-                      </div>
+                      </motion.div>
                     ) : (
-                      <p className="text-[#C98895] mt-2 text-sm leading-relaxed italic">"{review.comment}"</p>
+                      <p className="text-[#8b5a2b] mt-2 text-xl leading-relaxed italic font-medium text-center md:text-left px-4 md:px-0">
+                        "{review.comment}"
+                      </p>
                     )}
                   </div>
                 </motion.div>
@@ -347,52 +353,58 @@ export default function Reviews() {
 
       <motion.form
         onSubmit={handleSubmit}
-        className="group flex flex-col gap-4 w-full max-w-md bg-white/90 backdrop-blur-md rounded-3xl shadow-xl p-10 mt-10 hover:shadow-2xl transition-all duration-300 border-2 border-[#D4A24C]/20"
-        initial={{ opacity: 0, y: 20 }}
+        className="relative z-10 flex flex-col gap-6 w-full max-w-xl bg-white rounded-[3.5rem] shadow-[20px_20px_0_rgba(212,162,76,0.1)] p-12 mt-16 border-4 border-[#D4A24C]/20"
+        initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
       >
-        <div className="text-center mb-4">
-          <p className="text-[10px] font-black uppercase text-[#D4A24C] tracking-[0.3em]">Leave a Note</p>
+        <div className="text-center">
+            <Heart className="mx-auto mb-4 text-[#C98895] fill-[#C98895]/20" size={40} />
+            <h2 className="text-3xl font-black text-[#8b5a2b] uppercase tracking-tighter">Seal it with a note</h2>
+            <p className="text-[10px] font-black uppercase text-[#D4A24C] tracking-[0.4em] mt-2">Share the Honey</p>
         </div>
 
-        <div className="flex justify-center mb-2">
+        <div className="flex justify-center gap-2 mb-2">
           {[1, 2, 3, 4, 5].map(starValue => (
-            <span
+            <motion.span
               key={starValue}
-              className={`cursor-pointer text-4xl transition-transform hover:scale-125 ${starValue <= newReview.rating ? "text-[#D4A24C]" : "text-[#F0EBD1]/50"}`}
+              whileHover={{ scale: 1.3, rotate: 15 }}
+              whileTap={{ scale: 0.9 }}
+              className={`cursor-pointer text-5xl transition-colors ${starValue <= newReview.rating ? "text-[#D4A24C]" : "text-[#F0EBD1]"}`}
               onClick={() => handleStarClick(starValue)}
             >
               ★
-            </span>
+            </motion.span>
           ))}
         </div>
 
-        <input
-          type="text"
-          name="name"
-          placeholder="Your Name"
-          value={newReview.name}
-          onChange={handleChange}
-          className="w-full p-4 rounded-xl border border-[#D4A24C]/30 focus:outline-none focus:ring-2 focus:ring-[#D4A24C] placeholder:text-[#C98895]/50 text-[#C98895] bg-transparent"
-          required
-        />
+        <div className="space-y-4">
+            <input
+            type="text"
+            name="name"
+            placeholder="Your Name"
+            value={newReview.name}
+            onChange={handleChange}
+            className="w-full p-6 rounded-[1.8rem] border-2 border-[#D4A24C]/10 focus:border-[#D4A24C] focus:outline-none placeholder:text-[#8b5a2b]/30 text-[#8b5a2b] font-bold bg-[#FDF6F8] transition-all"
+            required
+            />
 
-        <textarea
-          name="comment"
-          placeholder="How was the experience?"
-          rows={4}
-          value={newReview.comment}
-          onChange={handleChange}
-          className="w-full p-4 rounded-xl border border-[#D4A24C]/30 focus:outline-none focus:ring-2 focus:ring-[#D4A24C] placeholder:text-[#C98895]/50 text-[#C98895] bg-transparent"
-          required
-        />
+            <textarea
+            name="comment"
+            placeholder="How was the experience?"
+            rows={4}
+            value={newReview.comment}
+            onChange={handleChange}
+            className="w-full p-6 rounded-[1.8rem] border-2 border-[#D4A24C]/10 focus:border-[#D4A24C] focus:outline-none placeholder:text-[#8b5a2b]/30 text-[#8b5a2b] font-bold bg-[#FDF6F8] transition-all"
+            required
+            />
+        </div>
 
         <button
           type="submit"
-          className="bg-[#D4A24C] hover:bg-[#9CAF88] text-white font-black uppercase text-xs py-5 px-8 rounded-2xl shadow-[4px_4px_0_#C98895] transition-all active:translate-y-1 active:shadow-none"
+          className="bg-[#D4A24C] hover:bg-[#8b5a2b] text-white font-black uppercase text-xs py-6 px-8 rounded-3xl shadow-[6px_6px_0_#C98895] transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none"
         >
-          Post Review ✨
+          Post to Archive ✨
         </button>
       </motion.form>
     </section>
