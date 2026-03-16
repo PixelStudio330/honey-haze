@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Minus, Plus, ReceiptText, Trash2, LogIn } from "lucide-react";
+import { Minus, Plus, ReceiptText, Trash2, LogIn, Sparkles } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 // 🌸 BACKUP DATA
@@ -68,10 +68,8 @@ export default function Home() {
   };
 
   const addToCart = (item: FoodItem) => {
-    // 🍯 AUTH CHECK: If no session, show the login toast
     if (!session) {
       setNotification({ message: "Want to order? Sign in! ૮₍ ˶ᵔ ᵕ ᵔ˶ ₎ა", type: 'auth' });
-      // Keep auth toast visible longer so they can click it
       setTimeout(() => setNotification(null), 5000);
       return;
     }
@@ -154,6 +152,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen bg-[#F0EBD1] flex flex-col items-center justify-start text-center overflow-x-hidden">
       
+      {/* 🛍️ FLOATY BAG SUMMARY */}
       <AnimatePresence>
         {cartItems.length > 0 && (
           <motion.div
@@ -197,7 +196,6 @@ export default function Home() {
             <span className="flex items-center gap-2">
               {notification.type === 'auth' ? '🍯' : '✅'} {notification.message}
             </span>
-            
             {notification.type === 'auth' && (
               <button 
                 onClick={() => router.push('/login')}
@@ -210,7 +208,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="relative w-full h-[450px] md:h-[600px] flex flex-col items-center justify-center z-0 overflow-hidden">
+      {/* 🥞 HERO SECTION */}
+      <div className="relative w-full h-[500px] md:h-[650px] flex flex-col items-center justify-start z-0 overflow-hidden">
         <Image 
           src="/images/new-hero.jpg" 
           alt="Hero" 
@@ -219,21 +218,76 @@ export default function Home() {
           priority 
           unoptimized 
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 bg-transparent">
-          <motion.h1 className="text-5xl sm:text-7xl font-extrabold" style={{ color: '#FFD700', textShadow: '4px 4px 20px rgba(0,0,0,0.6)' }}
-            animate={{ y: [-3, 3, -3] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-            🥞 Honey Haze 🍯
-          </motion.h1>
-          <p className="mt-4 text-lg sm:text-2xl text-white font-bold drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] italic">delicious food, fast service, zero regrets 🍭</p>
+        
+        {/* 🌊 INTENSE SPIRAL WAVES (NO LOOP-BACKS) */}
+        <div className="absolute bottom-0 left-0 w-full z-10 translate-y-[4px]">
+          <svg 
+            viewBox="0 0 1440 160" 
+            className="w-full h-auto block scale-[1.03] origin-bottom" 
+            preserveAspectRatio="none"
+          >
+            {/* The colored accent border path - High Intensity */}
+            <path 
+              fill="#C98895" 
+              d="M0,80 C180,160 360,0 540,80 C720,160 900,0 1080,80 C1260,160 1440,0 1440,80 V100 C1440,20 1260,180 1080,100 C900,20 720,180 540,100 C360,20 180,180 0,100 Z"
+            ></path>
+            {/* The main background fill path - High Intensity */}
+            <path 
+              fill="#F0EBD1" 
+              d="M0,95 C180,175 360,15 540,95 C720,175 900,15 1080,95 C1260,175 1440,15 1440,95 V165 H0 Z"
+            ></path>
+          </svg>
+        </div>
+
+        <div className="absolute inset-0 flex flex-col items-center justify-start pt-32 md:pt-44 text-center px-8 bg-black/10">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
+            className="flex flex-col items-center"
+          >
+            <motion.h1 
+              className="text-7xl sm:text-9xl font-black tracking-tighter" 
+              style={{ 
+                color: '#FFD700', 
+                filter: 'drop-shadow(6px 6px 0px #8A5559)'
+              }}
+              animate={{ 
+                y: [0, -10, 0],
+                rotate: [-0.5, 0.5, -0.5]
+              }} 
+              transition={{ 
+                duration: 5, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+            >
+              Honey Haze
+            </motion.h1>
+            
+            <motion.div 
+              className="mt-4 flex items-center gap-2"
+              animate={{ opacity: [0.8, 1, 0.8] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
+              <p className="text-sm sm:text-xl text-white font-black uppercase tracking-[0.3em] flex items-center gap-3 drop-shadow-md">
+                <Sparkles size={18} className="text-[#FFD700]" />
+                Delicious magic in every bite
+                <Sparkles size={18} className="text-[#FFD700]" />
+              </p>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
-      <div className="w-full flex flex-col items-center px-6">
-        <div className="z-10 flex gap-4 mt-8 mb-6">
+      {/* Main Content Area */}
+      <div className="w-full flex flex-col items-center px-6 -mt-1 relative z-20 bg-[#F0EBD1]">
+        {/* 🏷️ FILTER BUTTONS */}
+        <div className="flex gap-5 mb-16 pt-10">
             {["all", "sweet", "spicy"].map((type) => (
             <button key={type} onClick={() => setFilter(type)}
-                className={`px-6 py-2 rounded-full font-bold transition-all shadow-md active:scale-95 ${
-                filter === type ? "bg-[#D4A24C] text-white" : "bg-white text-[#8A5559] border-2 border-[#D4A24C]"
+                className={`px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-[8px_8px_0_#8A5559] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none border-[3px] border-[#8A5559] ${
+                filter === type ? "bg-[#D4A24C] text-white" : "bg-white text-[#8A5559]"
                 }`}
             >
                 {type === "all" ? "🍞 All" : type === "sweet" ? "🍰 Sweet" : "🌶 Spicy"}
@@ -241,50 +295,74 @@ export default function Home() {
             ))}
         </div>
 
-        <section className="z-10 w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pb-20">
+        {/* 🍕 FOOD GRID */}
+        <section className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 pb-40">
             {loading ? (
-            <div className="col-span-full py-20 text-2xl font-bold text-[#8A5559] animate-pulse">Baking the magic... 🌸</div>
+            <div className="col-span-full py-24 text-3xl font-black text-[#8A5559] animate-pulse">Baking magic... ✨</div>
             ) : (
             filteredFoods.map((food) => {
                 const inCart = cartItems.find(f => f.foodId === String(food.id));
                 return (
-                <motion.div key={food.id} layout className="bg-white/90 backdrop-blur-md rounded-3xl shadow-xl overflow-hidden border-4 border-[#8A5559] flex flex-col" whileHover={{ y: -5 }}>
-                    <div className="relative w-full h-48">
-                    <Image src={food.image || "/images/logo.jpg"} alt={food.name} fill className="object-cover" unoptimized />
+                <motion.div 
+                  key={food.id} 
+                  layout 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ y: -12 }}
+                  className="bg-white rounded-[3.5rem] shadow-2xl overflow-hidden border-[6px] border-[#8A5559] flex flex-col group"
+                >
+                    <div className="relative w-full h-72 overflow-hidden border-b-[6px] border-[#8A5559]">
+                      <Image 
+                        src={food.image || "/images/logo.jpg"} 
+                        alt={food.name} 
+                        fill 
+                        className="object-cover transition-transform duration-1000 group-hover:scale-110 group-hover:rotate-1" 
+                        unoptimized 
+                      />
+                      <div className="absolute top-6 left-6 bg-[#FFE6ED] px-5 py-2 rounded-full border-[3px] border-[#8A5559] text-xs font-black uppercase text-[#8A5559] shadow-sm">
+                        {food.type}
+                      </div>
                     </div>
-                    <div className="p-5 flex flex-col flex-grow text-left">
-                    <h3 className="text-lg font-black text-[#C98895] uppercase">{food.name}</h3>
-                    <p className="text-xs text-[#82A899] font-bold mt-1 mb-4 line-clamp-2">{food.description}</p>
-                    <div className="flex items-center justify-between mt-auto">
-                        <span className="text-lg font-black text-[#D4A24C]">৳ {food.price}</span>
-                        
-                        {!inCart ? (
-                        <button onClick={() => addToCart(food)} className="bg-[#D4A24C] hover:bg-[#C98895] text-white font-black py-2 px-4 rounded-full text-xs shadow-md transition-all active:scale-90">
-                            ADD +
-                        </button>
-                        ) : (
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center bg-[#fdfcf0] border-2 border-[#8A5559] rounded-xl overflow-hidden">
-                            <button onClick={() => changeQty(inCart.foodId, -1)} className="px-2 py-1 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Minus size={14} strokeWidth={3} /></button>
-                            <input 
-                                type="number" 
-                                value={inCart.qty} 
-                                onFocus={(e) => handleManualQty(inCart.foodId, "")}
-                                onBlur={(e) => handleBlur(inCart.foodId, e.target.value)}
-                                onChange={(e) => handleManualQty(inCart.foodId, e.target.value)}
-                                className="w-8 text-center font-black text-xs text-[#1a120b] bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                            />
-                            <button onClick={() => changeQty(inCart.foodId, 1)} className="px-2 py-1 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Plus size={14} strokeWidth={3} /></button>
-                            </div>
+
+                    <div className="p-10 flex flex-col flex-grow text-left">
+                      <h3 className="text-3xl font-black text-[#C98895] uppercase leading-tight mb-4 group-hover:text-[#D4A24C] transition-colors">{food.name}</h3>
+                      <p className="text-base text-[#82A899] font-bold mb-10 line-clamp-2 leading-relaxed opacity-90">
+                        {food.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mt-auto">
+                          <span className="text-3xl font-black text-[#8A5559]">৳{food.price}</span>
+                          
+                          {!inCart ? (
                             <button 
-                            onClick={() => removeFromCart(inCart.foodId)}
-                            className="p-2 bg-[#FFE6ED] text-[#8A5559] border-2 border-[#8A5559] rounded-xl hover:bg-[#8A5559] hover:text-white transition-all shadow-sm active:scale-90"
+                              onClick={() => addToCart(food)} 
+                              className="bg-[#82A899] hover:bg-[#C98895] text-white font-black py-4 px-10 rounded-2xl text-sm shadow-[6px_6px_0_#8A5559] transition-all active:scale-95 border-2 border-[#8A5559]"
                             >
-                            <Trash2 size={16} />
+                                ADD +
                             </button>
-                        </div>
-                        )}
-                    </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center bg-[#FDFCF0] border-[3px] border-[#8A5559] rounded-2xl overflow-hidden shadow-sm">
+                                  <button onClick={() => changeQty(inCart.foodId, -1)} className="px-4 py-2 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Minus size={16} strokeWidth={4} /></button>
+                                  <input 
+                                      type="number" 
+                                      value={inCart.qty} 
+                                      onFocus={(e) => handleManualQty(inCart.foodId, "")}
+                                      onBlur={(e) => handleBlur(inCart.foodId, e.target.value)}
+                                      onChange={(e) => handleManualQty(inCart.foodId, e.target.value)}
+                                      className="w-12 text-center font-black text-lg text-[#8A5559] bg-transparent focus:outline-none" 
+                                  />
+                                  <button onClick={() => changeQty(inCart.foodId, 1)} className="px-4 py-2 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Plus size={16} strokeWidth={4} /></button>
+                                </div>
+                                <button 
+                                  onClick={() => removeFromCart(inCart.foodId)}
+                                  className="p-4 bg-[#FFE6ED] text-[#8A5559] border-[3px] border-[#8A5559] rounded-2xl hover:bg-[#8A5559] hover:text-white transition-all shadow-sm"
+                                >
+                                  <Trash2 size={24} />
+                                </button>
+                            </div>
+                          )}
+                      </div>
                     </div>
                 </motion.div>
                 )
