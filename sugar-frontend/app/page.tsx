@@ -219,19 +219,16 @@ export default function Home() {
           unoptimized 
         />
         
-        {/* 🌊 INTENSE SPIRAL WAVES (NO LOOP-BACKS) */}
         <div className="absolute bottom-0 left-0 w-full z-10 translate-y-[4px]">
           <svg 
             viewBox="0 0 1440 160" 
             className="w-full h-auto block scale-[1.03] origin-bottom" 
             preserveAspectRatio="none"
           >
-            {/* The colored accent border path - High Intensity */}
             <path 
               fill="#C98895" 
               d="M0,80 C180,160 360,0 540,80 C720,160 900,0 1080,80 C1260,160 1440,0 1440,80 V100 C1440,20 1260,180 1080,100 C900,20 720,180 540,100 C360,20 180,180 0,100 Z"
             ></path>
-            {/* The main background fill path - High Intensity */}
             <path 
               fill="#F0EBD1" 
               d="M0,95 C180,175 360,15 540,95 C720,175 900,15 1080,95 C1260,175 1440,15 1440,95 V165 H0 Z"
@@ -295,8 +292,8 @@ export default function Home() {
             ))}
         </div>
 
-        {/* 🍕 FOOD GRID */}
-        <section className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 pb-40">
+        {/* 🍕 FOOD GRID - Updated for Wider Cards */}
+        <section className="w-full max-w-[1400px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-14 pb-40 px-4">
             {loading ? (
             <div className="col-span-full py-24 text-3xl font-black text-[#8A5559] animate-pulse">Baking magic... ✨</div>
             ) : (
@@ -309,9 +306,9 @@ export default function Home() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   whileHover={{ y: -12 }}
-                  className="bg-white rounded-[3.5rem] shadow-2xl overflow-hidden border-[6px] border-[#8A5559] flex flex-col group"
+                  className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border-[6px] border-[#8A5559] flex flex-col group"
                 >
-                    <div className="relative w-full h-72 overflow-hidden border-b-[6px] border-[#8A5559]">
+                    <div className="relative w-full h-80 overflow-hidden border-b-[6px] border-[#8A5559]">
                       <Image 
                         src={food.image || "/images/logo.jpg"} 
                         alt={food.name} 
@@ -324,14 +321,14 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="p-10 flex flex-col flex-grow text-left">
-                      <h3 className="text-3xl font-black text-[#C98895] uppercase leading-tight mb-4 group-hover:text-[#D4A24C] transition-colors">{food.name}</h3>
-                      <p className="text-base text-[#82A899] font-bold mb-10 line-clamp-2 leading-relaxed opacity-90">
+                    <div className="p-8 md:p-12 flex flex-col flex-grow text-left">
+                      <h3 className="text-3xl md:text-4xl font-black text-[#C98895] uppercase leading-tight mb-4 group-hover:text-[#D4A24C] transition-colors">{food.name}</h3>
+                      <p className="text-lg text-[#82A899] font-bold mb-10 line-clamp-2 leading-relaxed opacity-90">
                         {food.description}
                       </p>
                       
                       <div className="flex items-center justify-between mt-auto">
-                          <span className="text-3xl font-black text-[#8A5559]">৳{food.price}</span>
+                          <span className="text-3xl md:text-4xl font-black text-[#8A5559]">৳{food.price}</span>
                           
                           {!inCart ? (
                             <button 
