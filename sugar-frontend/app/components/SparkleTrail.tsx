@@ -20,17 +20,19 @@ class Particle {
   constructor(x: number, y: number) {
     this.x = x;
     this.y = y;
-    this.size = Math.random() * 8 + 3; // Slightly larger for impact
+    // 🤏 Slightly smaller base size for better performance and cleaner look
+    this.size = Math.random() * 4 + 2; 
     this.life = 1;
-    this.decay = Math.random() * 0.015 + 0.01;
-    this.speedX = (Math.random() - 0.5) * 4;
-    this.speedY = (Math.random() - 0.5) * 4;
+    // ⚡ Slightly faster decay to prevent particle buildup
+    this.decay = Math.random() * 0.02 + 0.015;
+    this.speedX = (Math.random() - 0.5) * 3;
+    this.speedY = (Math.random() - 0.5) * 3;
     this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
     this.angle = Math.random() * Math.PI * 2;
-    this.spin = (Math.random() - 0.5) * 0.3;
+    this.spin = (Math.random() - 0.5) * 0.2;
     
     const typeChance = Math.random();
-    this.type = typeChance > 0.96 ? "cherry" : typeChance > 0.85 ? "star" : "glow";
+    this.type = typeChance > 0.97 ? "cherry" : typeChance > 0.88 ? "star" : "glow";
   }
 
   update() {
@@ -38,7 +40,7 @@ class Particle {
     this.y += this.speedY;
     this.life -= this.decay;
     this.angle += this.spin;
-    this.size *= 0.97;
+    this.size *= 0.96;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
@@ -48,14 +50,14 @@ class Particle {
     ctx.rotate(this.angle);
     ctx.fillStyle = this.color;
     
-    // Using shadowColor with a higher alpha for a "pop" effect
-    ctx.shadowBlur = 8;
+    // Reduced blur slightly to save on GPU draw calls
+    ctx.shadowBlur = 6;
     ctx.shadowColor = this.color;
 
     if (this.type === "star") {
       this.drawStar(ctx, 0, 0, 5, this.size, this.size / 2.5);
     } else if (this.type === "cherry") {
-      ctx.font = `${this.size * 2}px serif`;
+      ctx.font = `${this.size * 2.5}px serif`;
       ctx.fillText("🍒", 0, 0);
     } else {
       ctx.beginPath();
@@ -97,7 +99,8 @@ export default function SparkleTrail() {
     };
 
     const addParticles = (e: MouseEvent) => {
-      for (let i = 0; i < 5; i++) {
+      // 📉 Spawn 3 particles instead of 5 to reduce CPU load
+      for (let i = 0; i < 3; i++) {
         particlesRef.current.push(new Particle(e.clientX, e.clientY));
       }
     };
@@ -108,15 +111,13 @@ export default function SparkleTrail() {
 
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Ensure the draw order is normal so colors aren't eaten by the background
       ctx.globalCompositeOperation = "source-over";
 
       const particles = particlesRef.current;
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.update();
-        if (p.life <= 0 || p.size <= 0.5) {
+        if (p.life <= 0 || p.size <= 0.4) {
           particles.splice(i, 1);
         } else {
           p.draw(ctx);
@@ -138,7 +139,6 @@ export default function SparkleTrail() {
     <canvas
       ref={canvasRef}
       className="fixed top-0 left-0 w-full h-full pointer-events-none z-[9999]"
-      // Removed mixBlendMode: 'screen' so it's always visible on light colors
     />
   );
 }
