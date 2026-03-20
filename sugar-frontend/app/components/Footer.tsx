@@ -99,8 +99,8 @@ export default function Footer() {
           <div className="flex gap-6">
             {[
               { icon: <Facebook size={20} />, href: "https://facebook.com" },
-              { icon: <Instagram size={20} />, href: "https://instagram.com" },
-              { icon: <Github size={20} />, href: "https://github.com" },
+              { icon: <Instagram size={20} />, href: "https://www.instagram.com/certi.fried_dora/?__pwa=1" },
+              { icon: <Github size={20} />, href: "https://github.com/PixelStudio330" },
             ].map((social, idx) => (
               <motion.a
                 key={idx}

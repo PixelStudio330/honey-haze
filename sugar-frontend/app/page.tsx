@@ -160,7 +160,7 @@ export default function Home() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 100, opacity: 0 }}
             onClick={() => window.dispatchEvent(new CustomEvent("open-cart"))}
-            className="fixed bottom-24 right-8 z-[50] w-64 bg-white border-[3px] border-[#8A5559] rounded-2xl shadow-[6px_6px_0_#8A5559] cursor-pointer overflow-hidden flex flex-col max-h-48"
+            className="fixed bottom-24 right-4 md:right-8 z-[50] w-64 bg-white border-[3px] border-[#8A5559] rounded-2xl shadow-[6px_6px_0_#8A5559] cursor-pointer overflow-hidden flex flex-col max-h-48"
           >
             <div className="bg-[#FFE6ED] p-2 border-b-2 border-[#8A5559] flex items-center justify-between">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[#8A5559]">
@@ -209,7 +209,7 @@ export default function Home() {
       </AnimatePresence>
 
       {/* 🥞 HERO SECTION */}
-      <div className="relative w-full h-[500px] md:h-[650px] flex flex-col items-center justify-start z-0 overflow-hidden">
+      <div className="relative w-full h-[400px] md:h-[650px] flex flex-col items-center justify-start z-0 overflow-hidden">
         <Image 
           src="/images/new-hero.jpg" 
           alt="Hero" 
@@ -236,7 +236,7 @@ export default function Home() {
           </svg>
         </div>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-start pt-32 md:pt-44 text-center px-8 bg-black/10">
+        <div className="absolute inset-0 flex flex-col items-center justify-start pt-24 md:pt-44 text-center px-8 bg-black/10">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -244,10 +244,10 @@ export default function Home() {
             className="flex flex-col items-center"
           >
             <motion.h1 
-              className="text-7xl sm:text-9xl font-black tracking-tighter" 
+              className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter" 
               style={{ 
                 color: '#FFD700', 
-                filter: 'drop-shadow(6px 6px 0px #8A5559)'
+                filter: 'drop-shadow(4px 4px 0px #8A5559)'
               }}
               animate={{ 
                 y: [0, -10, 0],
@@ -267,10 +267,10 @@ export default function Home() {
               animate={{ opacity: [0.8, 1, 0.8] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              <p className="text-sm sm:text-xl text-white font-black uppercase tracking-[0.3em] flex items-center gap-3 drop-shadow-md">
-                <Sparkles size={18} className="text-[#FFD700]" />
+              <p className="text-[10px] sm:text-xl text-white font-black uppercase tracking-[0.2em] md:tracking-[0.3em] flex items-center gap-2 md:gap-3 drop-shadow-md">
+                <Sparkles size={14} className="text-[#FFD700]" />
                 Delicious magic in every bite
-                <Sparkles size={18} className="text-[#FFD700]" />
+                <Sparkles size={14} className="text-[#FFD700]" />
               </p>
             </motion.div>
           </motion.div>
@@ -278,12 +278,12 @@ export default function Home() {
       </div>
 
       {/* Main Content Area */}
-      <div className="w-full flex flex-col items-center px-6 -mt-1 relative z-20 bg-[#F0EBD1]">
+      <div className="w-full flex flex-col items-center px-4 md:px-6 -mt-1 relative z-20 bg-[#F0EBD1]">
         {/* 🏷️ FILTER BUTTONS */}
-        <div className="flex gap-5 mb-16 pt-10">
+        <div className="flex flex-wrap justify-center gap-3 md:gap-5 mb-10 md:mb-16 pt-10">
             {["all", "sweet", "spicy"].map((type) => (
             <button key={type} onClick={() => setFilter(type)}
-                className={`px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-[8px_8px_0_#8A5559] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none border-[3px] border-[#8A5559] ${
+                className={`px-6 md:px-10 py-3 md:py-4 rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-xs tracking-widest transition-all shadow-[4px_4px_0_#8A5559] md:shadow-[8px_8px_0_#8A5559] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none border-[2px] md:border-[3px] border-[#8A5559] ${
                 filter === type ? "bg-[#D4A24C] text-white" : "bg-white text-[#8A5559]"
                 }`}
             >
@@ -292,10 +292,10 @@ export default function Home() {
             ))}
         </div>
 
-        {/* 🍕 FOOD GRID - Updated for Wider Cards */}
-        <section className="w-full max-w-[1400px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-14 pb-40 px-4">
+        {/* 🍕 FOOD GRID */}
+        <section className="w-full max-w-[1200px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 pb-40 px-2 md:px-4">
             {loading ? (
-            <div className="col-span-full py-24 text-3xl font-black text-[#8A5559] animate-pulse">Baking magic... ✨</div>
+            <div className="col-span-full py-24 text-2xl md:text-3xl font-black text-[#8A5559] animate-pulse">Baking magic... ✨</div>
             ) : (
             filteredFoods.map((food) => {
                 const inCart = cartItems.find(f => f.foodId === String(food.id));
@@ -305,10 +305,11 @@ export default function Home() {
                   layout 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ y: -12 }}
-                  className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border-[6px] border-[#8A5559] flex flex-col group"
+                  whileHover={{ y: -8 }}
+                  className="bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-xl overflow-hidden border-[4px] md:border-[6px] border-[#8A5559] flex flex-col group h-full"
                 >
-                    <div className="relative w-full h-80 overflow-hidden border-b-[6px] border-[#8A5559]">
+                    {/* Image Container with Fixed Aspect Ratio */}
+                    <div className="relative w-full aspect-[4/3] overflow-hidden border-b-[4px] md:border-b-[6px] border-[#8A5559]">
                       <Image 
                         src={food.image || "/images/logo.jpg"} 
                         alt={food.name} 
@@ -316,46 +317,48 @@ export default function Home() {
                         className="object-cover transition-transform duration-1000 group-hover:scale-110 group-hover:rotate-1" 
                         unoptimized 
                       />
-                      <div className="absolute top-6 left-6 bg-[#FFE6ED] px-5 py-2 rounded-full border-[3px] border-[#8A5559] text-xs font-black uppercase text-[#8A5559] shadow-sm">
+                      <div className="absolute top-4 left-4 md:top-6 md:left-6 bg-[#FFE6ED] px-4 py-1.5 md:px-5 md:py-2 rounded-full border-[2px] md:border-[3px] border-[#8A5559] text-[10px] md:text-xs font-black uppercase text-[#8A5559] shadow-sm">
                         {food.type}
                       </div>
                     </div>
 
-                    <div className="p-8 md:p-12 flex flex-col flex-grow text-left">
-                      <h3 className="text-3xl md:text-4xl font-black text-[#C98895] uppercase leading-tight mb-4 group-hover:text-[#D4A24C] transition-colors">{food.name}</h3>
-                      <p className="text-lg text-[#82A899] font-bold mb-10 line-clamp-2 leading-relaxed opacity-90">
+                    {/* Content Container */}
+                    <div className="p-6 md:p-10 flex flex-col flex-grow text-left">
+                      <h3 className="text-2xl md:text-3xl font-black text-[#C98895] uppercase leading-tight mb-3 group-hover:text-[#D4A24C] transition-colors">{food.name}</h3>
+                      <p className="text-sm md:text-base text-[#82A899] font-bold mb-6 md:mb-8 line-clamp-3 leading-relaxed opacity-90">
                         {food.description}
                       </p>
                       
-                      <div className="flex items-center justify-between mt-auto">
-                          <span className="text-3xl md:text-4xl font-black text-[#8A5559]">৳{food.price}</span>
+                      {/* Price and Button Action */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 mt-auto">
+                          <span className="text-2xl md:text-3xl font-black text-[#8A5559]">৳{food.price}</span>
                           
                           {!inCart ? (
                             <button 
                               onClick={() => addToCart(food)} 
-                              className="bg-[#82A899] hover:bg-[#C98895] text-white font-black py-4 px-10 rounded-2xl text-sm shadow-[6px_6px_0_#8A5559] transition-all active:scale-95 border-2 border-[#8A5559]"
+                              className="bg-[#82A899] hover:bg-[#C98895] text-white font-black py-3 px-8 md:py-4 md:px-10 rounded-xl md:rounded-2xl text-xs md:text-sm shadow-[4px_4px_0_#8A5559] md:shadow-[6px_6px_0_#8A5559] transition-all active:scale-95 border-2 border-[#8A5559]"
                             >
                                 ADD +
                             </button>
                           ) : (
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center bg-[#FDFCF0] border-[3px] border-[#8A5559] rounded-2xl overflow-hidden shadow-sm">
-                                  <button onClick={() => changeQty(inCart.foodId, -1)} className="px-4 py-2 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Minus size={16} strokeWidth={4} /></button>
+                            <div className="flex items-center gap-2 md:gap-3">
+                                <div className="flex items-center bg-[#FDFCF0] border-[2px] md:border-[3px] border-[#8A5559] rounded-xl md:rounded-2xl overflow-hidden shadow-sm">
+                                  <button onClick={() => changeQty(inCart.foodId, -1)} className="px-3 py-1.5 md:px-4 md:py-2 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Minus size={14} strokeWidth={4} /></button>
                                   <input 
                                       type="number" 
                                       value={inCart.qty} 
                                       onFocus={(e) => handleManualQty(inCart.foodId, "")}
                                       onBlur={(e) => handleBlur(inCart.foodId, e.target.value)}
                                       onChange={(e) => handleManualQty(inCart.foodId, e.target.value)}
-                                      className="w-12 text-center font-black text-lg text-[#8A5559] bg-transparent focus:outline-none" 
+                                      className="w-10 md:w-12 text-center font-black text-base md:text-lg text-[#8A5559] bg-transparent focus:outline-none" 
                                   />
-                                  <button onClick={() => changeQty(inCart.foodId, 1)} className="px-4 py-2 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Plus size={16} strokeWidth={4} /></button>
+                                  <button onClick={() => changeQty(inCart.foodId, 1)} className="px-3 py-1.5 md:px-4 md:py-2 hover:bg-[#FFE6ED] text-[#8A5559] transition-colors"><Plus size={14} strokeWidth={4} /></button>
                                 </div>
                                 <button 
                                   onClick={() => removeFromCart(inCart.foodId)}
-                                  className="p-4 bg-[#FFE6ED] text-[#8A5559] border-[3px] border-[#8A5559] rounded-2xl hover:bg-[#8A5559] hover:text-white transition-all shadow-sm"
+                                  className="p-3 md:p-4 bg-[#FFE6ED] text-[#8A5559] border-[2px] md:border-[3px] border-[#8A5559] rounded-xl md:rounded-2xl hover:bg-[#8A5559] hover:text-white transition-all shadow-sm"
                                 >
-                                  <Trash2 size={24} />
+                                  <Trash2 size={20} />
                                 </button>
                             </div>
                           )}
