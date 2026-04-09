@@ -3,7 +3,7 @@
 **Honey Haze** is an immersive, high-performance web template designed for cafes, bakeries, and boutique eateries. It perfectly blends **Artistic Visuals** with **Corporate-Grade Functionality**, creating a sensory experience that converts visitors into customers.
 
 > [!IMPORTANT]
-> **Copyright Notice:** This project is a proprietary design and technical showcase by **Nyra**. This code is **not** open-source. To order a custom-built version for your business, contact me below.
+> **Copyright Notice:** This project is a proprietary design and technical showcase by **Nyra** and **Gulnahar**. This code is **not** open-source. To order a custom-built version for your business, contact me below.
 
 ### 🛒 Order This Experience
 * **Fiverr:** [Hire Nyra for Custom Development](https://www.fiverr.com/s/XLyy4b2)
@@ -33,7 +33,7 @@ Built for speed, reliability, and smooth interaction.
 
 ---
 
-## 🚀 Explore My Project Ecosystem
+## 🚀 Explore Our Project Ecosystem
 
 * **🐾 Pawsky Wawsky** | [Pet Sanctuary Template](https://pawsky-wawsky.vercel.app/)
 * **💎 Pixel Studio** | [Official Studio Site](https://pixel-studio-opal.vercel.app/)
@@ -42,7 +42,7 @@ Built for speed, reliability, and smooth interaction.
 ---
 
 ## 🎨 Creative Credits
-* **Lead Developer & Designer:** Nyra
+* **Lead Developers & Designers:** Nyra and Gulnahar
 * **Studio:** Pixel Studio
 * **Philosophy:** High-end functional art for the modern web.
 
@@ -51,5 +51,5 @@ Built for speed, reliability, and smooth interaction.
 ## 📩 Contact & Inquiries
 Looking for a unique, high-end website for your brand?
 * **Email:** `pixelstudioo003@gmail.com`
-* **Portfolio:** [st4rligh7.vercel.app](https://st4rligh7.vercel.app/)
+* **Portfolios:** Nyra~ [st4rligh7.vercel.app](https://st4rligh7.vercel.app/)<br> Gulnahar~ [m1dnightbl00m.vercel.app](https://m1dnightbl00m.vercel.app/)
 * **Fiverr:** [Hire Nyra](https://www.fiverr.com/s/XLyy4b2)
